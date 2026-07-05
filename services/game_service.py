@@ -539,12 +539,12 @@ class GameService:
             return {"success": False, "error": "Game not started."}
         if not self.current_player:
             return {"success": False, "error": "No active player."}
-        if market_index < 0 or market_index >= len(self.table.marches):
+        if market_index < 0 or market_index >= len(self.table.markets):
             return {"success": False, "error": "Invalid market index."}
         if product_index < 0 or product_index >= len(self.current_player.finished_products):
             return {"success": False, "error": "Invalid product index."}
 
-        marche = self.table.markets[market_index]
+        market_board = self.table.markets[market_index]
         product = self.current_player.finished_products[product_index]
 
         if quantity > product["quantity"]:
@@ -552,11 +552,11 @@ class GameService:
 
         base_price = product["sell_price"]
         revenue = base_price * quantity
-        tax = int(revenue * marche.lieu.tax_rate)
+        tax = int(revenue * market_board.location.tax_rate)
         net_revenue = revenue - tax
 
         # Update market demand
-        sale_result = marche.sell(quantity, self.current_player.pseudo)
+        sale_result = market_board.sell(quantity, self.current_player.username)
         if not sale_result["success"]:
             return {"success": False, "error": sale_result["error"]}
 
@@ -567,7 +567,7 @@ class GameService:
             self.current_player.finished_products.remove(product)
 
         self.game_log.append(
-            f"💰 Sold {quantity}x {product['name']} at {marche.lieu.name} for {net_revenue:,.0f} FCFA (tax: {tax:,})"
+            f"💰 Sold {quantity}x {product['name']} at {market_board.location.name} for {net_revenue:,.0f} FCFA (tax: {tax:,})"
         )
 
         return {

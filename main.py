@@ -87,7 +87,7 @@ def main():
             # Tab 2: Game
             with gr.TabItem("🎮 Game"):
                 (
-                    game_pseudo,
+                    game_username,
                     game_fortune,
                     start_btn,
                     roll_btn,

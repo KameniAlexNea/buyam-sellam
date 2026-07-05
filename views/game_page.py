@@ -13,18 +13,18 @@ def create_game_page(game_service: GameService):
     """Create the main game page with all game controls."""
 
     def _market_choices():
-        return [f"Market {i}: {m.lieu.name}" for i, m in enumerate(game_service.table.markets)]
+        return [f"Market {i}: {m.location.name}" for i, m in enumerate(game_service.table.markets)]
 
-    def on_start_game(pseudo: str, player_fortune: float = 10000.0):
-        if not pseudo or len(pseudo.strip()) < 3:
+    def on_start_game(username: str, player_fortune: float = 10000.0):
+        if not username or len(username.strip()) < 3:
             return (gr.update(visible=True, value="❌ Please enter a player name (at least 3 characters)."),) + tuple(gr.update() for _ in range(8))
-        pseudo = pseudo.strip()
-        result = game_service.start_game(pseudo, player_fortune=player_fortune)
+        username = username.strip()
+        result = game_service.start_game(username, player_fortune=player_fortune)
         if result["success"]:
             markets_md = _markets_to_markdown(result["markets"])
             leaderboard_md = _leaderboard_to_markdown(result["leaderboard"])
             dice_md = (
-                f"**🎲 {result['dice']['des1']} + {result['dice']['des2']} = {result['dice']['total']}** "
+                f"**🎲 {result['dice']['die1']} + {result['dice']['die2']} = {result['dice']['total']}** "
                 f"({result['dice'].get('condition', 'normal')}) → "
                 f"💵 Your price: **{result['dice']['total'] * 100} FCFA/unit** "
                 f"({result['dice']['total']} × 100, range 200–1200)"
@@ -51,7 +51,7 @@ def create_game_page(game_service: GameService):
             markets_md = _markets_to_markdown(result["markets"])
             leaderboard_md = _leaderboard_to_markdown(result["leaderboard"])
             dice_md = (
-                f"**🎲 {result['dice']['des1']} + {result['dice']['des2']} = {result['dice']['total']}** "
+                f"**🎲 {result['dice']['die1']} + {result['dice']['die2']} = {result['dice']['total']}** "
                 f"({result['condition']}) → "
                 f"💵 Your price: **{result.get('dice_price', result['dice']['total'] * 100)} FCFA/unit** "
                 f"({result['dice']['total']} × 100, range 200–1200)"
@@ -60,8 +60,8 @@ def create_game_page(game_service: GameService):
             event_md = ""
             if result.get("event"):
                 evt = result["event"]
-                emoji = "✨" if evt["effet"] == "gain" else "💔"
-                event_md = f"\n\n⚡ **{evt['nom']}**\n{evt['description']}\n{emoji} {evt['amount']:,.0f} FCFA"
+                emoji = "✨" if evt["effect"] == "gain" else "💔"
+                event_md = f"\n\n⚡ **{evt['name']}**\n{evt['description']}\n{emoji} {evt['amount']:,.0f} FCFA"
 
             choices = _market_choices()
             status = game_service.get_player_status()
@@ -175,7 +175,7 @@ def create_game_page(game_service: GameService):
         # Game setup
         with gr.Accordion("🎯 Game Setup", open=True):
             with gr.Row():
-                game_pseudo = gr.Textbox(
+                game_username = gr.Textbox(
                     label="Your Username",
                     placeholder="Enter your player name",
                     info="Min 3 characters",
@@ -283,7 +283,7 @@ def create_game_page(game_service: GameService):
         # Event handlers
         start_btn.click(
             fn=on_start_game,
-            inputs=[game_pseudo, game_fortune],
+            inputs=[game_username, game_fortune],
             outputs=[game_status, dice_display, markets_display, leaderboard_display, player_status, game_log_display, sell_market, buy_market, sell_finished_market],
         )
 
@@ -329,7 +329,7 @@ def create_game_page(game_service: GameService):
             outputs=[game_status, final_results, game_log_display],
         )
 
-    return game_pseudo, game_fortune, start_btn, roll_btn, sell_btn, end_btn
+    return game_username, game_fortune, start_btn, roll_btn, sell_btn, end_btn
 
 
 def _player_status_to_markdown(status: dict, fortune: float = None) -> str:
@@ -363,15 +363,15 @@ def _markets_to_markdown(markets: list) -> str:
         return "No active markets."
     md = ""
     for i, m in enumerate(markets):
-        lieu = m.get("lieu", {})
-        produit = m.get("product", lieu.get("product", "?"))
-        fixed = m.get("market_fixed_price", lieu.get("fixed_price", 0))
+        location = m.get("location", {})
+        product = m.get("product", location.get("product", "?"))
+        fixed = m.get("market_fixed_price", location.get("fixed_price", 0))
         supply = m.get("market_supply", m.get("remaining_qty", 0))
-        tax_rate = lieu.get("tax_rate", 0)
+        tax_rate = location.get("tax_rate", 0)
 
         md += (
-            f"**Market {i}: {lieu.get('name','?')}** "
-            f"| 📦 Product: **{produit}** "
+            f"**Market {i}: {location.get('name','?')}** "
+            f"| 📦 Product: **{product}** "
             f"| 🏷 Fixed price: **{fixed:,} FCFA/unit** "
             f"| Supply: {supply:,} "
             f"| Tax: {tax_rate*100:.0f}%\n\n"
@@ -381,7 +381,7 @@ def _markets_to_markdown(markets: list) -> str:
             md += "| Seller | Qty | Their price | vs fixed |\n|--------|-----|-------------|----------|\n"
             for o in orders[:6]:
                 vs = "✅ sells" if o["price"] <= fixed else "⏳ wait"
-                md += f"| {o['pseudo']} | {o['remaining']} | {o['price']:,} | {vs} |\n"
+                md += f"| {o['username']} | {o['remaining']} | {o['price']:,} | {vs} |\n"
             md += "\n"
         else:
             md += "_No sell orders yet._\n\n"

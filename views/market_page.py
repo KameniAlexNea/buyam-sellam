@@ -128,7 +128,7 @@ def create_market_page(game_service: GameService):
             products_catalog = gr.Markdown(visible=False, elem_id="products-catalog")
 
         # Locations section
-        with gr.Accordion("📍 Sales Locations (Lieux de Vente)", open=True):
+        with gr.Accordion("📍 Sales Locations", open=True):
             locations_display = gr.Markdown(visible=False, elem_id="locations-display")
 
         # Purchase status
@@ -263,10 +263,10 @@ def _leaderboard_to_markdown(leaderboard: list) -> str:
         return "No players yet."
 
     md = "**🏆 Leaderboard:**\n\n"
-    md += "| Rank | Player | Fortune |\n"
+    md += "| Rank | Player | Balance |\n"
     md += "|------|--------|---------|\n"
     for entry in leaderboard:
-        md += f"| #{entry['rank']} | {entry['pseudo']} | {entry['fortune']:,.0f} FCFA |\n"
+        md += f"| #{entry['rank']} | {entry['username']} | {entry['balance']:,.0f} FCFA |\n"
     return md
 
 

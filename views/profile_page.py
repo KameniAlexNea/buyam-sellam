@@ -68,12 +68,12 @@ def create_profile_page(game_service: GameService, user_service: UserService):
                         placeholder="New email address",
                         info="Leave blank to keep current",
                     )
-                    update_profil = gr.Dropdown(
-                        choices=["Entrepreneur", "Investisseur", "Spéculateur", "Négociant"],
+                    update_profile = gr.Dropdown(
+                        choices=["Entrepreneur", "Investor", "Speculator", "Trader"],
                         label="Profile Type",
                         info="Your business role",
                     )
-                    update_pays = gr.Textbox(
+                    update_country = gr.Textbox(
                         label="Country",
                         placeholder="New country",
                         info="Leave blank to keep current",
@@ -92,7 +92,7 @@ def create_profile_page(game_service: GameService, user_service: UserService):
 
         update_btn.click(
             fn=on_update_profile,
-            inputs=[update_email, update_profil, update_pays],
+            inputs=[update_email, update_profile, update_country],
             outputs=[update_status],
         )
 

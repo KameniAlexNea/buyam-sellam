@@ -42,36 +42,36 @@ class UserService:
 
     def register(
         self,
-        pseudo: str,
+        username: str,
         password: str,
-        mail: str,
-        pays: str,
-        date_naissance: str,
-        sexe: str = "",
-        profil: str = "Entrepreneur",
+        email: str,
+        country: str,
+        birth_date: str,
+        gender: str = "",
+        profile: str = "Entrepreneur",
     ) -> Tuple[bool, str]:
         """Register a new user.
 
         Args:
-            pseudo: Username (min 5 chars)
+            username: Username (min 5 chars)
             password: Password (min 8 chars)
-            mail: Email address
-            pays: Country
-            date_naissance: Birth date
-            sexe: Gender
-            profil: Profile type
+            email: Email address
+            country: Country
+            birth_date: Birth date
+            gender: Gender
+            profile: Profile type
 
         Returns:
             Tuple of (success, message)
         """
         data = {
-            "pseudo": pseudo,
+            "pseudo": username,
             "password": password,
-            "mail": mail,
-            "pays": pays,
-            "dateNaissance": date_naissance,
-            "sexe": sexe,
-            "profil": profil,
+            "mail": email,
+            "pays": country,
+            "dateNaissance": birth_date,
+            "sexe": gender,
+            "profil": profile,
         }
         return self.api.register(data)
 
@@ -92,10 +92,10 @@ class UserService:
 
     def update_profile(
         self,
-        pseudo: str,
+        username: str,
         email: str = None,
-        profil: str = None,
-        pays: str = None,
+        profile: str = None,
+        country: str = None,
     ) -> Tuple[bool, str]:
         """Update user profile.
 
