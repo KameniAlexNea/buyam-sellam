@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 
-from pojo.contrainte import Constraint
+from pojo.constraint import Constraint
 
 
 @dataclass

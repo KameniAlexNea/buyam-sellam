@@ -19,31 +19,31 @@ import random
 from dataclasses import asdict
 from typing import Any, Dict, List, Optional
 
-from model.des import Des
-from pojo.lieu_vente import Market
+from model.dice import Dice
+from pojo.market import Market
 
 DICE_BASE = 100  # FCFA per dice point  (dice range 2-12 → price range 200-1200 FCFA/unit)
 
 
-class Marche:
+class MarketBoard:
     """A market location with a fixed product price and an order book."""
 
     def __init__(
         self,
-        lieu: Optional[Market] = None,
-        des: Optional[Des] = None,
+        location: Optional[Market] = None,
+        dice: Optional[Dice] = None,
     ):
-        self.lieu = lieu or Market()
-        self.des = des or Des()
+        self.location = location or Market()
+        self.dice = dice or Dice()
 
-        self.market_fixed_price: int = self.lieu.fixed_price
-        self.product: str = self.lieu.product
+        self.market_fixed_price: int = self.location.fixed_price
+        self.product: str = self.location.product
 
         self._init_round()
         self.passing_players: List[str] = []
 
     def _init_round(self) -> None:
-        self.market_supply: int = random.randint(self.lieu.min_qty, self.lieu.max_qty)
+        self.market_supply: int = random.randint(self.location.min_qty, self.location.max_qty)
         self.sell_orders: List[Dict[str, Any]] = []
         self.completed_trades: List[Dict[str, Any]] = []
         self.selling_players: List[str] = []
@@ -58,7 +58,7 @@ class Marche:
         if quantity <= 0:
             return {"success": False, "error": "Quantity must be positive"}
         self.sell_orders.append({
-            "pseudo": username,
+            "username": username,
             "quantity": quantity,
             "remaining": quantity,
             "price": dice_price,
@@ -80,7 +80,7 @@ class Marche:
                 break
             if order["price"] > dice_price:
                 break
-            if order["pseudo"] == username:
+            if order["username"] == username:
                 continue
             buy_qty = min(remaining, order["remaining"])
             cost = buy_qty * order["price"]
@@ -88,7 +88,7 @@ class Marche:
             remaining -= buy_qty
             total_cost += cost
             units_bought += buy_qty
-            trades.append({"buyer": username, "seller": order["pseudo"],
+            trades.append({"buyer": username, "seller": order["username"],
                            "quantity": buy_qty, "price": order["price"], "total": cost})
 
         if remaining > 0 and self.market_supply > 0 and self.market_fixed_price <= dice_price:
@@ -125,9 +125,9 @@ class Marche:
             if order["price"] <= self.market_fixed_price and order["remaining"] > 0:
                 qty = order["remaining"]
                 revenue = qty * order["price"]
-                tax = int(revenue * self.lieu.tax_rate)
+                tax = int(revenue * self.location.tax_rate)
                 settled.append({
-                    "seller": order["pseudo"],
+                    "seller": order["username"],
                     "quantity": qty,
                     "price": order["price"],
                     "revenue": revenue,
@@ -149,8 +149,8 @@ class Marche:
             return True
         return False
 
-    def refresh(self, des: Optional[Des] = None) -> None:
-        self.des = des or Des()
+    def refresh(self, dice: Optional[Dice] = None) -> None:
+        self.dice = dice or Dice()
         self._init_round()
 
     def to_dict(self) -> Dict[str, Any]:
@@ -160,9 +160,9 @@ class Marche:
             "market_supply": self.market_supply,
             "total_qty": self.total_qty,
             "remaining_qty": self.market_supply,
-            "lieu": asdict(self.lieu),
+            "location": asdict(self.location),
             "sell_orders": [
-                {"pseudo": o["pseudo"], "quantity": o["quantity"],
+                {"username": o["username"], "quantity": o["quantity"],
                  "remaining": o["remaining"], "price": o["price"]}
                 for o in self.sell_orders
             ],
@@ -171,9 +171,4 @@ class Marche:
         }
 
     def __repr__(self) -> str:
-        return f"Marche({self.lieu.name!r}, product={self.product!r}, fixed={self.market_fixed_price})"
-
-    def refresh(self, des: Optional[Des] = None) -> None:
-        self.des = des or Des()
-        self._init_round()
-
+        return f"MarketBoard({self.location.name!r}, product={self.product!r}, fixed={self.market_fixed_price})"

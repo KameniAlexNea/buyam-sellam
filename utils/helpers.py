@@ -36,9 +36,9 @@ def validate_email(email: str) -> bool:
     return '@' in email and '.' in email.split('@')[-1]
 
 
-def validate_pseudo(pseudo: str) -> bool:
-    """Validate pseudo meets minimum length."""
-    return len(pseudo) >= 5
+def validate_username(username: str) -> bool:
+    """Validate username meets minimum length."""
+    return len(username) >= 5
 
 
 def validate_password(password: str) -> bool:
@@ -72,17 +72,17 @@ def get_country_list() -> List[Dict[str, str]]:
     ]
 
 
-def get_sexe_options() -> List[str]:
+def get_gender_options() -> List[str]:
     """Get gender options."""
-    return ["Homme", "Femme"]
+    return ["Male", "Female"]
 
 
-def get_profil_options() -> List[str]:
+def get_profile_options() -> List[str]:
     """Get profile type options."""
-    return ["Entrepreneur", "Investisseur", "Spéculateur", "Négociant"]
+    return ["Entrepreneur", "Investor", "Speculator", "Trader"]
 
 
-def get_lieu_vente_options() -> List[Dict[str, Any]]:
+def get_market_location_options() -> List[Dict[str, Any]]:
     return [
         {"id": "lieu_1", "name": "Central Market",  "min_qty": 50,  "max_qty": 200,  "tax_rate": 0.05},
         {"id": "lieu_2", "name": "North Market",    "min_qty": 30,  "max_qty": 150,  "tax_rate": 0.08},
@@ -92,7 +92,7 @@ def get_lieu_vente_options() -> List[Dict[str, Any]]:
     ]
 
 
-def get_outil_options() -> List[Dict[str, Any]]:
+def get_tool_options() -> List[Dict[str, Any]]:
     return [
         {"id": "outil_1", "name": "Transport Truck", "cost": 5000,  "capacity": 100},
         {"id": "outil_2", "name": "Warehouse",       "cost": 10000, "capacity": 500},
@@ -102,7 +102,7 @@ def get_outil_options() -> List[Dict[str, Any]]:
     ]
 
 
-def get_carte_options() -> List[Dict[str, Any]]:
+def get_card_options() -> List[Dict[str, Any]]:
     return [
         {"id": "carte_1", "name": "Gold Card",    "description": "Sales boost",       "value": 100, "price": 5000},
         {"id": "carte_2", "name": "Silver Card",  "description": "Tax reduction",     "value": 50,  "price": 2500},
@@ -112,29 +112,29 @@ def get_carte_options() -> List[Dict[str, Any]]:
     ]
 
 
-def get_plat_options() -> List[Dict[str, Any]]:
+def get_dish_options() -> List[Dict[str, Any]]:
     """Get dish options."""
     return [
-        {"nom": "Riz", "profile": "Staple"},
-        {"nom": "Pâtes", "profile": "Staple"},
-        {"nom": "Fufu", "profile": "Traditional"},
-        {"nom": "Yam", "profile": "Tuber"},
-        {"nom": "Maïs", "profile": "Céréale"},
+        {"name": "Rice", "profile": "Staple"},
+        {"name": "Pasta", "profile": "Staple"},
+        {"name": "Fufu", "profile": "Traditional"},
+        {"name": "Yam", "profile": "Tuber"},
+        {"name": "Corn", "profile": "Cereal"},
     ]
 
 
-def get_produit_plat_options() -> List[Dict[str, Any]]:
+def get_product_dish_options() -> List[Dict[str, Any]]:
     """Get product-dish combination options."""
     return [
-        {"plat": "Riz", "produit": "Riz", "pourcentage": 0.8},
-        {"plat": "Pâtes", "produit": "Pâtes", "pourcentage": 0.7},
-        {"plat": "Fufu", "produit": "Manioc", "pourcentage": 0.9},
-        {"plat": "Yam", "produit": "Igname", "pourcentage": 0.85},
-        {"plat": "Maïs", "produit": "Maïs", "pourcentage": 0.75},
+        {"dish": "Rice", "product": "Rice", "percentage": 0.8},
+        {"dish": "Pasta", "product": "Pasta", "percentage": 0.7},
+        {"dish": "Fufu", "product": "Cassava", "percentage": 0.9},
+        {"dish": "Yam", "product": "Yam", "percentage": 0.85},
+        {"dish": "Corn", "product": "Corn", "percentage": 0.75},
     ]
 
 
-def get_sanction_options() -> List[Dict[str, Any]]:
+def get_penalty_options() -> List[Dict[str, Any]]:
     return [
         {"id": "sanction_1", "name": "Warning",         "amount": 0},
         {"id": "sanction_2", "name": "Light Fine",      "amount": 1000},
@@ -144,11 +144,11 @@ def get_sanction_options() -> List[Dict[str, Any]]:
     ]
 
 
-def get_contrainte_options() -> List[Dict[str, Any]]:
+def get_constraint_options() -> List[Dict[str, Any]]:
     """Get constraint options."""
     return [
-        {"id": "contrainte_1", "nom": "Aucune", "description": "Pas de contrainte"},
-        {"id": "contrainte_2", "nom": "Minimum 50 unités", "description": "Quantité minimale requise"},
-        {"id": "contrainte_3", "nom": "Maximum 200 unités", "description": "Quantité maximale autorisée"},
-        {"id": "contrainte_4", "nom": "Réservé aux pros", "description": "Seuls les entrepreneurs peuvent vendre"},
+        {"id": "constraint_1", "name": "None", "description": "No constraint"},
+        {"id": "constraint_2", "name": "Minimum 50 units", "description": "Minimum quantity required"},
+        {"id": "constraint_3", "name": "Maximum 200 units", "description": "Maximum quantity allowed"},
+        {"id": "constraint_4", "name": "Reserved for professionals", "description": "Only entrepreneurs can sell"},
     ]

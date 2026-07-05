@@ -19,33 +19,33 @@ def create_profile_page(game_service: GameService, user_service: UserService):
             return gr.update(visible=True, value=f"❌ {status['error']}")
 
         md = f"""
-**👤 Profile: {status['pseudo']}**
+**👤 Profile: {status['username']}**
 
 | Stat | Value |
 |------|-------|
-| 💰 Fortune | {format_fortune(status['fortune'])} |
-| ⭐ Stars | {status['etoiles']} |
+| 💰 Fortune | {format_fortune(status['balance'])} |
+| ⭐ Stars | {status['stars']} |
 | 🎮 Competitions | {status['competitions']} |
-| 👥 Subscribers | {status['abonnes']} |
-| 🃏 Cards | {len(status['cartes'])} |
-| 🔧 Tools | {len(status['outils'])} |
+| 👥 Subscribers | {status['followers']} |
+| 🃏 Cards | {len(status['cards'])} |
+| 🔧 Tools | {len(status['tools'])} |
 | 📦 Total Capacity | {status['total_capacity']:,} units |
 | 🏆 Rank | #{status['rank']} |
 
 **🔧 Tools:**
-{chr(10).join(f'- {t["nom"]} (Capacity: {t["capacite"]:,})' for t in status['outils']) or '- None'}
+{chr(10).join(f'- {t["name"]} (Capacity: {t["capacity"]:,})' for t in status['tools']) or '- None'}
 
 **🃏 Cards:**
-{', '.join(status['cartes']) if status['cartes'] else '- None'}
+{', '.join(status['cards']) if status['cards'] else '- None'}
 """
         return gr.update(visible=True, value=md)
 
-    def on_update_profile(email: str, profil: str, pays: str):
+    def on_update_profile(email: str, profile: str, country: str):
         success, message = user_service.update_profile(
-            pseudo=user_service.get_current_user().pseudo if user_service.get_current_user() else "",
+            username=user_service.get_current_user().username if user_service.get_current_user() else "",
             email=email,
-            profil=profil,
-            pays=pays,
+            profile=profile,
+            country=country,
         )
         if success:
             return gr.update(visible=True, value=f"✅ {message}")

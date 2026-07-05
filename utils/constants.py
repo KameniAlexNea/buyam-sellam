@@ -1,13 +1,13 @@
 """Application constants for KSell Entreprise."""
 
-NOM_APPLICATION = "KSell Entreprise"
+APP_NAME = "KSell Entreprise"
 BASE_URL = "http://127.0.0.1:3001"
 IMAGE_FOLDER = "/resources/img/"
 VIEW_PATH = "/views/"
 ICON_PATH = "/resources/icon/"
 
 # Validation rules
-MIN_PSEUDO_LENGTH = 5
+MIN_USERNAME_LENGTH = 5
 MIN_PASSWORD_LENGTH = 8
 
 # Game constants

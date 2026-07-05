@@ -6,7 +6,7 @@ Wraps a pojo.Product with a quantity for trading purposes.
 from dataclasses import asdict
 from typing import Any, Dict
 
-from pojo.produit import Product
+from pojo.product import Product
 
 
 class ProductModel:

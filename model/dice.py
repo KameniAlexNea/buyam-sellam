@@ -1,4 +1,4 @@
-"""Des (Dice) model for KSell Entreprise.
+"""Dice model for KSell Entreprise.
 
 Represents two dice, each rolling 1-6. Used to determine market conditions.
 """
@@ -7,7 +7,7 @@ import random
 from typing import Any, Dict, Optional
 
 
-class Des:
+class Dice:
     """Two-dice roller for the KSell game.
 
     Each die produces a value between 1 and 6 (inclusive).
@@ -17,22 +17,22 @@ class Des:
     - 9-12: Good market (high demand)
     """
 
-    def __init__(self, des1: Optional[int] = None, des2: Optional[int] = None):
-        if des1 is not None and des2 is not None:
-            self.des1 = des1
-            self.des2 = des2
+    def __init__(self, die1: Optional[int] = None, die2: Optional[int] = None):
+        if die1 is not None and die2 is not None:
+            self.die1 = die1
+            self.die2 = die2
         else:
             self.shake()
 
-    def shake(self) -> "Des":
-        """Roll both dice and return a new Des instance."""
-        self.des1 = random.randint(1, 6)
-        self.des2 = random.randint(1, 6)
+    def shake(self) -> "Dice":
+        """Roll both dice and return a new Dice instance."""
+        self.die1 = random.randint(1, 6)
+        self.die2 = random.randint(1, 6)
         return self
 
     def total(self) -> int:
         """Return the sum of both dice."""
-        return self.des1 + self.des2
+        return self.die1 + self.die2
 
     def market_condition(self) -> str:
         """Determine market condition based on dice total.
@@ -64,19 +64,19 @@ class Des:
     def to_dict(self) -> Dict[str, Any]:
         """Convert dice to dictionary."""
         return {
-            "des1": self.des1,
-            "des2": self.des2,
+            "die1": self.die1,
+            "die2": self.die2,
             "total": self.total(),
             "condition": self.market_condition(),
         }
 
-    def clone(self) -> "Des":
-        """Return a deep copy of this Des."""
-        return Des(self.des1, self.des2)
+    def clone(self) -> "Dice":
+        """Return a deep copy of this Dice."""
+        return Dice(self.die1, self.die2)
 
     def __repr__(self) -> str:
-        return f"Des(d1={self.des1}, d2={self.des2}, total={self.total()})"
+        return f"Dice(d1={self.die1}, d2={self.die2}, total={self.total()})"
 
     def __str__(self) -> str:
         condition = self.market_condition()
-        return f"🎲 [{self.des1}|{self.des2}] = {self.total()} ({condition})"
+        return f"🎲 [{self.die1}|{self.die2}] = {self.total()} ({condition})"

@@ -3,13 +3,13 @@
 from dataclasses import asdict
 from typing import Any, List, Optional
 
-from pojo.carte import Card
-from pojo.lieu_vente import Market
-from pojo.outil import Tool
+from pojo.card import Card
+from pojo.market import Market
+from pojo.tool import Tool
 from pojo.user import User
 
 
-class Joueur:
+class Player:
     """Game player with user profile, tools, markets, and economy."""
 
     def __init__(
@@ -144,4 +144,4 @@ class Joueur:
         return self.user.balance >= amount
 
     def __repr__(self) -> str:
-        return f"Joueur(username={self.username!r}, balance={self.balance})"
+        return f"Player(username={self.username!r}, balance={self.balance})"

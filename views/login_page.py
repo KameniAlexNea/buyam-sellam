@@ -31,11 +31,11 @@ def _markets_to_markdown(markets: list) -> str:
 
     md = "**📊 Active Markets:**\n\n"
     for i, m in enumerate(markets):
-        lieu = m.get("lieu", {})
-        md += f"**Market {i}: {lieu.get('nom', 'Unknown')}**\n"
-        md += f"  📦 Demand: {m.get('qte_restante', 0):,} / {m.get('qte_total', 0):,} units\n"
-        md += f"  💸 Tax Rate: {lieu.get('taux', 0) * 100:.1f}%\n"
-        md += f"  👥 Sellers: {', '.join(m.get('joueurs_vend', [])) or 'None'}\n\n"
+        location = m.get("location", {})
+        md += f"**Market {i}: {location.get('name', 'Unknown')}**\n"
+        md += f"  📦 Demand: {m.get('remaining_qty', 0):,} / {m.get('total_qty', 0):,} units\n"
+        md += f"  💸 Tax Rate: {location.get('tax_rate', 0) * 100:.1f}%\n"
+        md += f"  👥 Sellers: {', '.join(m.get('selling_players', [])) or 'None'}\n\n"
     return md
 
 
@@ -48,7 +48,7 @@ def _leaderboard_to_markdown(leaderboard: list) -> str:
     md += "| Rank | Player | Fortune | Stars | Games |\n"
     md += "|------|--------|---------|-------|-------|\n"
     for entry in leaderboard:
-        md += f"| #{entry['rank']} | {entry['pseudo']} | {entry['fortune']:,.0f} FCFA | ⭐{entry['etoiles']} | 🎮{entry['competitions']} |\n"
+        md += f"| #{entry['rank']} | {entry['username']} | {entry['balance']:,.0f} FCFA | ⭐{entry['stars']} | 🎮{entry['competitions']} |\n"
     return md
 
 

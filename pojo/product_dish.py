@@ -2,8 +2,8 @@
 
 from dataclasses import dataclass, field
 
-from pojo.plat import Dish
-from pojo.produit import Product
+from pojo.dish import Dish
+from pojo.product import Product
 
 
 @dataclass

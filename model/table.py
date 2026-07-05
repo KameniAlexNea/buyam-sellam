@@ -6,11 +6,11 @@ Represents the game table that holds all active players and markets.
 import random
 from typing import Any, Dict, List, Optional
 
-from model.des import Des
-from model.joueur import Joueur
-from model.marche import Marche
-from pojo.lieu_vente import Market
-from pojo.outil import Tool
+from model.dice import Dice
+from model.player import Player
+from model.market_board import MarketBoard
+from pojo.market import Market
+from pojo.tool import Tool
 from pojo.user import User
 
 
@@ -18,13 +18,13 @@ class Table:
     """The game table containing all players and active markets."""
 
     def __init__(self):
-        self.players: List[Joueur] = []
-        self.markets: List[Marche] = []
-        self.des: Des = Des()
+        self.players: List[Player] = []
+        self.markets: List[MarketBoard] = []
+        self.dice: Dice = Dice()
         self.current_round: int = 0
         self.total_rounds: int = 10
 
-    def add_player(self, player: Joueur) -> bool:
+    def add_player(self, player: Player) -> bool:
         for p in self.players:
             if p.username == player.username:
                 return False
@@ -38,17 +38,17 @@ class Table:
                 return True
         return False
 
-    def get_player(self, username: str) -> Optional[Joueur]:
+    def get_player(self, username: str) -> Optional[Player]:
         for p in self.players:
             if p.username == username:
                 return p
         return None
 
-    def generate_markets(self) -> List[Marche]:
-        self.des.shake()
+    def generate_markets(self) -> List[MarketBoard]:
+        self.dice.shake()
         self.markets.clear()
 
-        num_markets = min(3, max(1, (self.des.total() - 4) // 3))
+        num_markets = min(3, max(1, (self.dice.total() - 4) // 3))
 
         market_options = [
             Market(id="lieu_1", name="Central Market",    min_qty=50,  max_qty=200,  tax_rate=0.05, product="Cooked Rice",     fixed_price=800),
@@ -61,7 +61,7 @@ class Table:
         selected = random.sample(market_options, min(num_markets, len(market_options)))
 
         for loc in selected:
-            market = Marche(lieu=loc, des=self.des)
+            market = MarketBoard(location=loc, dice=self.dice)
             self.markets.append(market)
 
         return self.markets
@@ -80,9 +80,9 @@ class Table:
 
         return {
             "round": self.current_round,
-            "dice": self.des.to_dict(),
+            "dice": self.dice.to_dict(),
             "markets": [m.to_dict() for m in self.markets],
-            "condition": self.des.market_condition(),
+            "condition": self.dice.market_condition(),
         }
 
     def get_leaderboard(self) -> List[Dict[str, Any]]:

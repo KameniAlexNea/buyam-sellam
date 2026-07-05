@@ -6,7 +6,7 @@ Detailed market view with tools, cards, locations, and production supplies.
 import gradio as gr
 
 from services.game_service import GameService
-from utils.helpers import format_fortune, get_carte_options, get_lieu_vente_options, get_outil_options
+from utils.helpers import format_fortune, get_card_options, get_market_location_options, get_tool_options
 
 
 def create_market_page(game_service: GameService):
@@ -62,20 +62,20 @@ def create_market_page(game_service: GameService):
         )
 
     # Available tools catalog
-    tools_options = get_outil_options()
-    tools_choices = [f"{t['nom']} (Cost: {t['cout']:,} FCFA, Capacity: {t['capacite']})" for t in tools_options]
+    tools_options = get_tool_options()
+    tools_choices = [f"{t['name']} (Cost: {t['cost']:,} FCFA, Capacity: {t['capacity']})" for t in tools_options]
 
     # Available cards catalog
-    cards_options = get_carte_options()
-    cards_choices = [f"{c['nom']} - {c['description']} (Cost: {c['prix']:,} FCFA, Value: {c['valeur']})" for c in cards_options]
+    cards_options = get_card_options()
+    cards_choices = [f"{c['name']} - {c['description']} (Cost: {c['price']:,} FCFA, Value: {c['value']})" for c in cards_options]
 
     # Raw materials catalog
     materials = game_service.get_raw_materials()
-    materials_choices = [f"{m['nom']} - {m['prix']:,} FCFA (yields {m['rendement']} units)" for m in materials]
+    materials_choices = [f"{m['name']} - {m['price']:,} FCFA (yields {m['yield']} units)" for m in materials]
 
     # Finished products catalog
     products = game_service.get_finished_products()
-    products_choices = [f"{p['nom']} (from {p['matiere_premiere']}) - sells for {p['prix_vente']:,} FCFA" for p in products]
+    products_choices = [f"{p['name']} (from {p['raw_material']}) - sells for {p['sell_price']:,} FCFA" for p in products]
 
     with gr.Column(elem_id="market-container"):
         gr.Markdown("## 🏪 KSell Entreprise - Marketplace")
@@ -174,10 +174,10 @@ def _tools_to_markdown(tools: list) -> str:
         return "You don't own any tools yet."
 
     md = "**🔧 Your Tools:**\n\n"
-    total_cap = sum(t.get("capacite", 0) for t in tools)
+    total_cap = sum(t.get("capacity", 0) for t in tools)
     md += f"Total Capacity: {total_cap:,} units\n\n"
     for t in tools:
-        md += f"- **{t.get('nom', 'Unknown')}**: Capacity {t.get('capacite', 0):,} units\n"
+        md += f"- **{t.get('name', 'Unknown')}**: Capacity {t.get('capacity', 0):,} units\n"
     return md
 
 
@@ -190,7 +190,7 @@ def _tools_catalog_to_markdown(tools: list) -> str:
     md += "| Tool | Cost (FCFA) | Capacity |\n"
     md += "|------|-------------|----------|\n"
     for t in tools:
-        md += f"| {t['nom']} | {t['cout']:,} | {t['capacite']:,} units |\n"
+        md += f"| {t['name']} | {t['cost']:,} | {t['capacity']:,} units |\n"
     return md
 
 

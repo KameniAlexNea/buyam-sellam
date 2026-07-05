@@ -8,20 +8,20 @@ import random
 from dataclasses import asdict
 from typing import Any, Dict, List, Optional, Tuple
 
-from model.des import Des
-from model.joueur import Joueur
-from model.marche import Marche
+from model.dice import Dice
+from model.player import Player
+from model.market_board import MarketBoard
 from model.table import Table
-from pojo.carte import Card
-from pojo.lieu_vente import Market
-from pojo.outil import Tool
-from pojo.produit import Product
+from pojo.card import Card
+from pojo.market import Market
+from pojo.tool import Tool
+from pojo.product import Product
 from pojo.user import User
 from utils.helpers import (
-    get_carte_options,
-    get_lieu_vente_options,
-    get_outil_options,
-    get_sanction_options,
+    get_card_options,
+    get_market_location_options,
+    get_tool_options,
+    get_penalty_options,
 )
 
 
@@ -71,17 +71,17 @@ class GameService:
 
     def __init__(self):
         self.table = Table()
-        self.current_player: Optional[Joueur] = None
+        self.current_player: Optional[Player] = None
         self.game_log: List[str] = []
         self.is_game_active = False
         self.events_log: List[Dict[str, Any]] = []
         self.current_dice_price: int = 0  # player's price this round
 
-    def start_game(self, player_pseudo: str, player_fortune: float = 10000.0) -> Dict[str, Any]:
+    def start_game(self, player_username: str, player_fortune: float = 10000.0) -> Dict[str, Any]:
         """Start a new game with the given player.
 
         Args:
-            player_pseudo: Player's username
+            player_username: Player's username
             player_fortune: Starting fortune
 
         Returns:
@@ -89,11 +89,11 @@ class GameService:
         """
         # Create or update current player
         user = User(
-            username=player_pseudo,
+            username=player_username,
             balance=player_fortune,
             is_verified=True,
         )
-        self.current_player = Joueur(user=user)
+        self.current_player = Player(user=user)
         # Starting inventory: a mix of products found in the available markets
         self.current_player.basic_stock = 0  # legacy field (unused now)
         self.current_player.inventory = []
@@ -110,9 +110,9 @@ class GameService:
         ai_names = ["Amina", "Jean", "Fatou", "Paul", "Aïssatou"]
         for name in ai_names:
             ai_user = User(username=name, balance=random.uniform(5000, 20000))
-            ai_player = Joueur(user=ai_user)
+            ai_player = Player(user=ai_user)
             # Give AI players some random tools
-            tool_opts = get_outil_options()
+            tool_opts = get_tool_options()
             nb_tools = random.randint(0, 2)
             for _ in range(nb_tools):
                 d = random.choice(tool_opts)
@@ -124,12 +124,12 @@ class GameService:
         markets = self.table.generate_markets()
 
         self.is_game_active = True
-        self.current_dice_price = self.table.des.total() * self.DICE_BASE
+        self.current_dice_price = self.table.dice.total() * self.DICE_BASE
 
         # AI players immediately post orders for round 0
         self._ai_turn()
         self.game_log.append(f"🎮 Game started with {len(self.table.players)} players!")
-        self.game_log.append(f"👤 {player_pseudo} | 💰 {player_fortune:,.0f} FCFA | 🎲 Your price: {self.current_dice_price:,} FCFA/unit")
+        self.game_log.append(f"👤 {player_username} | 💰 {player_fortune:,.0f} FCFA | 🎲 Your price: {self.current_dice_price:,} FCFA/unit")
         self.game_log.append(f"📊 Markets: {len(markets)}")
 
         return {
@@ -139,7 +139,7 @@ class GameService:
             "player_fortune": self.current_player.balance,
             "player_rank": self._get_player_rank(),
             "markets": [m.to_dict() for m in markets],
-            "dice": self.table.des.to_dict(),
+            "dice": self.table.dice.to_dict(),
             "leaderboard": self.table.get_leaderboard(),
             "log": self._get_recent_log(10),
         }
@@ -161,7 +161,7 @@ class GameService:
         event_result = self._check_random_event()
 
         self.game_log.append(
-            f"--- Round {result['round']} | 🎲 Dice: {result['dice']['des1']}+{result['dice']['des2']}={result['dice']['total']} ({result['condition']}) ---"
+            f"--- Round {result['round']} | 🎲 Dice: {result['dice']['die1']}+{result['dice']['die2']}={result['dice']['total']} ({result['condition']}) ---"
         )
         if event_result:
             self.game_log.append(f"⚡ Event: {event_result['name']} - {event_result['description']}")
@@ -170,7 +170,7 @@ class GameService:
         if self.current_player:
             dice_total = result["dice"]["total"]
             self.current_dice_price = dice_total * self.DICE_BASE
-            self.game_log.append(f"🎲 Dice: {result['dice']['des1']}+{result['dice']['des2']}={dice_total} → Your price: {self.current_dice_price:,} FCFA/unit")
+            self.game_log.append(f"🎲 Dice: {result['dice']['die1']}+{result['dice']['die2']}={dice_total} → Your price: {self.current_dice_price:,} FCFA/unit")
 
         return {
             "success": True,
@@ -197,35 +197,35 @@ class GameService:
         if self.current_dice_price == 0:
             return {"success": False, "error": "Roll the dice first to get your price."}
 
-        marche = self.table.markets[market_index]
-        produit = marche.product
+        market_board = self.table.markets[market_index]
+        product = market_board.product
 
         finished = getattr(self.current_player, 'finished_products', [])
-        product_entry = next((p for p in finished if p["name"] == produit), None)
+        product_entry = next((p for p in finished if p["name"] == product), None)
         if not product_entry or product_entry["quantity"] < quantity:
             have = product_entry["quantity"] if product_entry else 0
             return {
                 "success": False,
-                "error": f"Not enough {produit}. You have {have} units, need {quantity}.",
+                "error": f"Not enough {product}. You have {have} units, need {quantity}.",
             }
 
         product_entry["quantity"] -= quantity
         if product_entry["quantity"] == 0:
             self.current_player.finished_products.remove(product_entry)
 
-        marche.post_sell_order(self.current_player.username, quantity, self.current_dice_price)
+        market_board.post_sell_order(self.current_player.username, quantity, self.current_dice_price)
 
-        fixed = marche.market_fixed_price
+        fixed = market_board.market_fixed_price
         if self.current_dice_price <= fixed:
             note = f"✅ Your price ({self.current_dice_price:,}) ≤ market fixed ({fixed:,}) → will auto-sell at round end"
         else:
             note = f"⏳ Your price ({self.current_dice_price:,}) > market fixed ({fixed:,}) → only other buyers can take it"
 
-        self.game_log.append(f"📋 Sell {quantity}x {produit} @ {self.current_dice_price:,} at {marche.lieu.name}. {note}")
+        self.game_log.append(f"📋 Sell {quantity}x {product} @ {self.current_dice_price:,} at {market_board.location.name}. {note}")
 
         return {
             "success": True,
-            "message": f"Listed {quantity}x {produit} @ {self.current_dice_price:,} FCFA/unit. {note}",
+            "message": f"Listed {quantity}x {product} @ {self.current_dice_price:,} FCFA/unit. {note}",
             "player_fortune": self.current_player.balance,
             "finished_products": getattr(self.current_player, 'finished_products', []),
             "markets": [m.to_dict() for m in self.table.markets],
@@ -244,8 +244,8 @@ class GameService:
         if self.current_dice_price == 0:
             return {"success": False, "error": "Roll the dice first to get your price."}
 
-        marche = self.table.markets[market_index]
-        result = marche.execute_buy(self.current_player.username, quantity, self.current_dice_price)
+        market_board = self.table.markets[market_index]
+        result = market_board.execute_buy(self.current_player.username, quantity, self.current_dice_price)
 
         if result["success"]:
             total_cost = result["total_cost"]
@@ -255,15 +255,15 @@ class GameService:
             self.current_player.subtract_fortune(total_cost)
 
             # Add product to finished_products inventory
-            produit = marche.product
-            prix_vente = marche.market_fixed_price
+            product = market_board.product
+            sell_price = market_board.market_fixed_price
             fp = getattr(self.current_player, 'finished_products', [])
-            entry = next((p for p in fp if p["name"] == produit), None)
+            entry = next((p for p in fp if p["name"] == product), None)
             if entry:
                 entry["quantity"] += result["units_bought"]
             else:
-                fp.append({"id": f"bought_{produit}", "name": produit,
-                           "quantity": result["units_bought"], "sell_price": prix_vente})
+                fp.append({"id": f"bought_{product}", "name": product,
+                           "quantity": result["units_bought"], "sell_price": sell_price})
             self.current_player.finished_products = fp
 
             # Pay sellers
@@ -274,10 +274,10 @@ class GameService:
                         seller.add_fortune(trade["total"])
 
             self.game_log.append(
-                f"🛒 Bought {result['units_bought']}x {produit} at avg {result['avg_price']:,} FCFA "
-                f"(total {total_cost:,}) at {marche.lieu.name}"
+                f"🛍 Bought {result['units_bought']}x {product} at avg {result['avg_price']:,} FCFA "
+                f"(total {total_cost:,}) at {market_board.location.name}"
             )
-            msg = (f"Bought {result['units_bought']}x {produit} for {total_cost:,} FCFA "
+            msg = (f"Bought {result['units_bought']}x {product} for {total_cost:,} FCFA "
                    f"(avg {result['avg_price']:,}/unit).")
             if result["unfilled"] > 0:
                 msg += f" {result['unfilled']} units unfilled."
@@ -297,8 +297,8 @@ class GameService:
 
     def _settle_round_sells(self) -> None:
         """Pay sellers whose orders were filled by market at round end."""
-        for marche in self.table.markets:
-            settled = marche.settle_remaining_sells()
+        for market_board in self.table.markets:
+            settled = market_board.settle_remaining_sells()
             for s in settled:
                 seller = self.table.get_player(s["seller"])
                 if seller:
@@ -316,7 +316,7 @@ class GameService:
         if not self.current_player:
             return {"success": False, "error": "No active player."}
 
-        tool_opts = get_outil_options()
+        tool_opts = get_tool_options()
         if tool_index < 0 or tool_index >= len(tool_opts):
             return {"success": False, "error": "Invalid tool index."}
 
@@ -350,7 +350,7 @@ class GameService:
         if not self.current_player:
             return {"success": False, "error": "No active player."}
 
-        card_opts = get_carte_options()
+        card_opts = get_card_options()
         if card_index < 0 or card_index >= len(card_opts):
             return {"success": False, "error": "Invalid card index."}
 
@@ -607,15 +607,15 @@ class GameService:
 
     def get_available_tools(self) -> List[Dict[str, Any]]:
         """Get list of available tools for purchase."""
-        return get_outil_options()
+        return get_tool_options()
 
     def get_available_cards(self) -> List[Dict[str, Any]]:
         """Get list of available cards for purchase."""
-        return get_carte_options()
+        return get_card_options()
 
     def get_available_locations(self) -> List[Dict[str, Any]]:
         """Get list of available sales locations."""
-        return get_lieu_vente_options()
+        return get_market_location_options()
 
     def get_raw_materials(self) -> List[Dict[str, Any]]:
         """Get list of available raw materials."""
@@ -672,19 +672,19 @@ class GameService:
 
     def _ai_turn(self) -> None:
         """Simulate AI players posting buy or sell orders for their products."""
-        for joueur in self.table.players:
-            if joueur.username == (self.current_player.username if self.current_player else ""):
+        for player in self.table.players:
+            if player.username == (self.current_player.username if self.current_player else ""):
                 continue
             if not self.table.markets:
                 continue
             ai_dice = random.randint(2, 12)
             ai_price = ai_dice * self.DICE_BASE
 
-            if not hasattr(joueur, 'finished_products'):
-                joueur.finished_products = []
-            if not joueur.finished_products:
+            if not hasattr(player, 'finished_products'):
+                player.finished_products = []
+            if not player.finished_products:
                 products = ["Fufu", "Cooked Rice", "Corn Flour", "Peanut Butter", "Smoked Fish"]
-                joueur.finished_products = [
+                player.finished_products = [
                     {"id": f"ai_{p}", "name": p, "quantity": random.randint(5, 30), "sell_price": 1000}
                     for p in random.sample(products, k=random.randint(1, 3))
                 ]
@@ -692,29 +692,29 @@ class GameService:
             action = random.choice(["sell", "sell", "buy", "nothing"])
 
             if action == "sell":
-                for marche in random.sample(self.table.markets, len(self.table.markets)):
-                    prod_entry = next((p for p in joueur.finished_products if p["name"] == marche.product), None)
+                for market_board in random.sample(self.table.markets, len(self.table.markets)):
+                    prod_entry = next((p for p in player.finished_products if p["name"] == market_board.product), None)
                     if prod_entry and prod_entry["quantity"] > 0:
                         qty = random.randint(1, min(15, prod_entry["quantity"]))
-                        marche.post_sell_order(joueur.username, qty, ai_price)
+                        market_board.post_sell_order(player.username, qty, ai_price)
                         prod_entry["quantity"] -= qty
                         self.game_log.append(
-                            f"  🤖 {joueur.username} lists {qty}x {marche.product} @ {ai_price:,} at {marche.lieu.name}"
+                            f"  🤖 {player.username} lists {qty}x {market_board.product} @ {ai_price:,} at {market_board.location.name}"
                         )
                         break
-            elif action == "buy" and joueur.balance >= 1000:
-                marche = random.choice(self.table.markets)
+            elif action == "buy" and player.balance >= 1000:
+                market_board = random.choice(self.table.markets)
                 qty = random.randint(1, 10)
-                result = marche.execute_buy(joueur.username, qty, ai_price)
+                result = market_board.execute_buy(player.username, qty, ai_price)
                 if result["success"]:
-                    joueur.subtract_fortune(result["total_cost"])
-                    prod_entry = next((p for p in joueur.finished_products if p["name"] == marche.product), None)
+                    player.subtract_fortune(result["total_cost"])
+                    prod_entry = next((p for p in player.finished_products if p["name"] == market_board.product), None)
                     if prod_entry:
                         prod_entry["quantity"] += result["units_bought"]
                     else:
-                        joueur.finished_products.append({
-                            "id": f"ai_{marche.product}", "name": marche.product,
-                            "quantity": result["units_bought"], "sell_price": marche.market_fixed_price
+                        player.finished_products.append({
+                            "id": f"ai_{market_board.product}", "name": market_board.product,
+                            "quantity": result["units_bought"], "sell_price": market_board.market_fixed_price
                         })
 
     def _check_random_event(self) -> Optional[Dict[str, Any]]:

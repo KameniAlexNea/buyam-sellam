@@ -1,8 +1,8 @@
 [project]
-name = "ksell-entreprise-gradio"
+name = "buyam-sellam"
 version = "0.1.0"
 description = "Add your description here"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 dependencies = [
     "gradio>=6.19.0",
     "numpy>=2.5.0",
