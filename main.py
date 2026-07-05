@@ -14,13 +14,13 @@ Game Overview:
 
 import gradio as gr
 
-from services.game_service import GameService
-from services.user_service import UserService
-from views.game_page import create_game_page
-from views.help_page import create_help_page
-from views.login_page import create_login_page
-from views.market_page import create_market_page
-from views.profile_page import create_profile_page
+from ksell.services.game_service import GameService
+from ksell.services.user_service import UserService
+from ksell.views.game_page import create_game_page
+from ksell.views.help_page import create_help_page
+from ksell.views.login_page import create_login_page
+from ksell.views.market_page import create_market_page
+from ksell.views.profile_page import create_profile_page
 
 
 def main():
