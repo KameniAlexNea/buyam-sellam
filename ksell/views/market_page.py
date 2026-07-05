@@ -103,11 +103,11 @@ def create_market_page(game_service: GameService):
     ]
 
     # Finished products catalog
-    products = game_service.get_finished_products()
-    products_choices = [
-        f"{p['name']} (from {p['raw_material']}) - sells for {p['sell_price']:,} FCFA"
-        for p in products
-    ]
+    # products = game_service.get_finished_products()
+    # products_choices = [
+    #     f"{p['name']} (from {p['raw_material']}) - sells for {p['sell_price']:,} FCFA"
+    #     for p in products
+    # ]
 
     with gr.Column(elem_id="market-container"):
         gr.Markdown("## 🏪 KSell Entreprise - Marketplace")
@@ -162,9 +162,9 @@ def create_market_page(game_service: GameService):
                         label="Select Material to Buy",
                         info="Purchase raw materials for production",
                     )
-                    buy_material_qty = gr.Number(
-                        label="Quantity", value=1, precision=0, minimum=1
-                    )
+                    # buy_material_qty = gr.Number(
+                    #     label="Quantity", value=1, precision=0, minimum=1
+                    # )
                     buy_material_btn = gr.Button(
                         "🛒 Buy Materials",
                         variant="secondary",
@@ -328,8 +328,8 @@ def _locations_to_markdown(locations: list) -> str:
     md = "**📍 Sales Locations:**\n\n"
     md += "| Location | Min Qty | Max Qty | Tax Rate |\n"
     md += "|----------|---------|---------|----------|\n"
-    for l in locations:
-        md += f"| {l['nom']} | {l['plage_min']} | {l['plage_max']} | {l['taux'] * 100:.1f}% |\n"
+    for location in locations:
+        md += f"| {location['nom']} | {location['plage_min']} | {location['plage_max']} | {location['taux'] * 100:.1f}% |\n"
     return md
 
 
