@@ -40,6 +40,8 @@ class MarketBoard:
 
         self.market_fixed_price: int = self.location.fixed_price
         self.product: str = self.location.product
+        self.last_purchase_price: Optional[int] = None  # Price market paid when buying full capacity
+        self.pending_market_purchase: Optional[Dict[str, Any]] = None  # Purchase to execute at end of round
 
         self._init_round()
         self.passing_players: List[str] = []
@@ -53,6 +55,12 @@ class MarketBoard:
         self.selling_players: List[str] = []
         self.total_qty = self.market_supply
         self.remaining_qty = self.market_supply
+        self.pending_market_purchase = None  # Clear pending purchase
+        
+        # Update market's fixed price if market made a purchase last round
+        if self.last_purchase_price is not None:
+            self.market_fixed_price = self.last_purchase_price
+            self.last_purchase_price = None
 
     # ------------------------------------------------------------------
     # Order book
@@ -150,6 +158,72 @@ class MarketBoard:
             "product": self.product,
         }
 
+    def handle_sell_order(
+        self, seller_username: str, quantity: int, dice_price: int
+    ) -> Dict[str, Any]:
+        """Handle sell order placement.
+        
+        When market is full: Store purchase as PENDING (will execute at end of round).
+          - Market buys at SELLER'S dice price (not market's fixed price)
+          - Limited to market's base capacity (max_qty)
+          - Seller's dice price becomes market's new fixed_price for next round
+          - Seller gets paid and removes inventory immediately
+        
+        When market has capacity: Add to order book at seller's dice price.
+        
+        Returns dict with tax amount and transaction details.
+        """
+        remaining_capacity = self.remaining_qty
+        
+        # Market is full: STORE purchase as pending (execute at end of round)
+        if remaining_capacity <= 0:
+            # Market will buy from this seller only, up to its max capacity
+            buy_qty = min(quantity, self.location.max_qty)
+            listing_price = dice_price  # Seller's dice price (market buys at seller's price)
+            
+            # Tax on the amount seller listed (not what market bought, what seller offered)
+            tax_amount = quantity * listing_price * self.location.tax_rate
+            
+            # Store as pending purchase (will be executed at end of round)
+            self.pending_market_purchase = {
+                "seller_username": seller_username,
+                "quantity": buy_qty,
+                "purchase_price": listing_price,
+                "quantity_listed": quantity,  # For tax calculation
+            }
+            
+            return {
+                "success": True,
+                "mode": "market_purchase",
+                "quantity_purchased": buy_qty,
+                "purchase_price": listing_price,
+                "tax_amount": tax_amount,
+                "product": self.product,
+                "market_name": self.location.name,
+            }
+        
+        # Market has capacity: List to order book at seller's dice price
+        listing_price = dice_price
+        tax_amount = quantity * listing_price * self.location.tax_rate
+        
+        result = self.post_sell_order(seller_username, quantity, listing_price)
+        
+        if result["success"]:
+            return {
+                "success": True,
+                "mode": "order_book",
+                "quantity_listed": quantity,
+                "listing_price": listing_price,
+                "tax_amount": tax_amount,
+                "product": self.product,
+                "market_name": self.location.name,
+            }
+        
+        return {
+            "success": False,
+            "error": "Failed to post sell order",
+        }
+
     def settle_remaining_sells(self) -> List[Dict[str, Any]]:
         settled = []
         for order in self.sell_orders:
@@ -172,6 +246,26 @@ class MarketBoard:
         self.sell_orders = [o for o in self.sell_orders if o["remaining"] > 0]
         return settled
 
+    def execute_pending_market_purchase(self) -> Optional[Dict[str, Any]]:
+        """Execute pending market purchase at END OF ROUND.
+        
+        Market takes the products and adds them to inventory for next round.
+        Returns purchase details for confirmation message, or None if no pending purchase.
+        """
+        if not self.pending_market_purchase:
+            return None
+        
+        purchase = self.pending_market_purchase
+        
+        # Add purchased units to market inventory
+        self.market_supply += purchase["quantity"]
+        self.remaining_qty = self.market_supply
+        
+        # Store new price for next round
+        self.last_purchase_price = purchase["purchase_price"]
+        
+        return purchase
+
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
@@ -181,6 +275,44 @@ class MarketBoard:
             self.passing_players.append(username)
             return True
         return False
+
+    def get_market_display_info(self, buyer_max_price: int) -> Dict[str, Any]:
+        """Get formatted market info for buyer display."""
+        affordable_orders = [o for o in self.sell_orders if o['price'] <= buyer_max_price]
+        market_can_supply = self.market_supply > 0 and self.market_fixed_price <= buyer_max_price
+        
+        cheapest_seller_price = min([o['price'] for o in affordable_orders], default=None) if affordable_orders else None
+        cheapest_market_price = self.market_fixed_price if market_can_supply else None
+        cheapest_available = min(filter(None, [cheapest_seller_price, cheapest_market_price]), default=None)
+        
+        sell_orders_info = ""
+        if affordable_orders:
+            total_units = sum(o['remaining'] for o in affordable_orders)
+            sell_orders_info = f"Sell Orders (within budget): {len(affordable_orders)} orders ({total_units} units) - cheapest: {cheapest_seller_price} FCFA/unit"
+        else:
+            cheapest_in_market = min([o['price'] for o in self.sell_orders], default=None) if self.sell_orders else None
+            if cheapest_in_market and cheapest_in_market > buyer_max_price:
+                sell_orders_info = f"✗ Sell Orders: {len(self.sell_orders)} orders but cheapest is {cheapest_in_market} FCFA (exceeds your limit of {buyer_max_price})"
+            else:
+                total_units = sum(o['remaining'] for o in self.sell_orders)
+                sell_orders_info = f"Sell Orders: {len(self.sell_orders)} orders ({total_units} units total)"
+        
+        market_supply_info = ""
+        if market_can_supply:
+            market_supply_info = f"Market Supply: {self.market_supply} units at {self.market_fixed_price} FCFA/unit"
+        
+        return {
+            "market_name": self.location.name,
+            "product": self.location.product,
+            "market_price": self.market_fixed_price,
+            "tax_rate": self.location.tax_rate,
+            "capacity": self.remaining_qty,
+            "total_qty": self.total_qty,
+            "sell_orders_info": sell_orders_info,
+            "market_supply_info": market_supply_info,
+            "cheapest_available": cheapest_available,
+            "has_affordable": bool(affordable_orders or market_can_supply),
+        }
 
     def refresh(self, dice: Optional[Dice] = None) -> None:
         self.dice = dice or Dice()
