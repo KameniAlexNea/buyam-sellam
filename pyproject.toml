@@ -1,0 +1,10 @@
+[project]
+name = "ksell-entreprise-gradio"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.14"
+dependencies = [
+    "gradio>=6.19.0",
+    "numpy>=2.5.0",
+    "pandas>=3.0.3",
+]
