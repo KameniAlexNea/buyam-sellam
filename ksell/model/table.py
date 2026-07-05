@@ -10,8 +10,6 @@ from ksell.model.dice import Dice
 from ksell.model.player import Player
 from ksell.model.market_board import MarketBoard
 from ksell.pojo.market import Market
-from ksell.pojo.tool import Tool
-from ksell.pojo.user import User
 
 
 class Table:
@@ -51,11 +49,51 @@ class Table:
         num_markets = min(3, max(1, (self.dice.total() - 4) // 3))
 
         market_options = [
-            Market(id="lieu_1", name="Central Market",    min_qty=50,  max_qty=200,  tax_rate=0.05, product="Cooked Rice",     fixed_price=800),
-            Market(id="lieu_2", name="North Market",      min_qty=30,  max_qty=150,  tax_rate=0.08, product="Fufu",            fixed_price=600),
-            Market(id="lieu_3", name="South Market",      min_qty=40,  max_qty=180,  tax_rate=0.06, product="Corn Flour",      fixed_price=500),
-            Market(id="lieu_4", name="Commercial Zone",   min_qty=100, max_qty=500,  tax_rate=0.03, product="Peanut Butter",   fixed_price=1000),
-            Market(id="lieu_5", name="Free Port",         min_qty=200, max_qty=1000, tax_rate=0.02, product="Smoked Fish",     fixed_price=1200),
+            Market(
+                id="lieu_1",
+                name="Central Market",
+                min_qty=50,
+                max_qty=200,
+                tax_rate=0.05,
+                product="Cooked Rice",
+                fixed_price=800,
+            ),
+            Market(
+                id="lieu_2",
+                name="North Market",
+                min_qty=30,
+                max_qty=150,
+                tax_rate=0.08,
+                product="Fufu",
+                fixed_price=600,
+            ),
+            Market(
+                id="lieu_3",
+                name="South Market",
+                min_qty=40,
+                max_qty=180,
+                tax_rate=0.06,
+                product="Corn Flour",
+                fixed_price=500,
+            ),
+            Market(
+                id="lieu_4",
+                name="Commercial Zone",
+                min_qty=100,
+                max_qty=500,
+                tax_rate=0.03,
+                product="Peanut Butter",
+                fixed_price=1000,
+            ),
+            Market(
+                id="lieu_5",
+                name="Free Port",
+                min_qty=200,
+                max_qty=1000,
+                tax_rate=0.02,
+                product="Smoked Fish",
+                fixed_price=1200,
+            ),
         ]
 
         selected = random.sample(market_options, min(num_markets, len(market_options)))

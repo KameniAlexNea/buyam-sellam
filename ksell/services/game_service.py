@@ -6,68 +6,231 @@ dice rolling, trading, production, events, and game progression.
 
 import random
 from dataclasses import asdict
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-from ksell.model.dice import Dice
 from ksell.model.player import Player
-from ksell.model.market_board import MarketBoard
 from ksell.model.table import Table
 from ksell.pojo.card import Card
-from ksell.pojo.market import Market
 from ksell.pojo.tool import Tool
-from ksell.pojo.product import Product
 from ksell.pojo.user import User
 from ksell.utils.helpers import (
     get_card_options,
     get_market_location_options,
     get_tool_options,
-    get_penalty_options,
 )
 
 
 # Raw materials that can be purchased for production
 RAW_MATERIALS = [
-    {"id": "mat_1", "name": "Cassava",      "price": 500,  "yield": 10, "description": "Raw cassava for fufu production"},
-    {"id": "mat_2", "name": "Raw Rice",     "price": 800,  "yield": 15, "description": "Raw rice for cooking"},
-    {"id": "mat_3", "name": "Corn",         "price": 400,  "yield": 12, "description": "Raw corn for various dishes"},
-    {"id": "mat_4", "name": "Peanuts",      "price": 600,  "yield": 8,  "description": "Raw peanuts for oil and sauce"},
-    {"id": "mat_5", "name": "Dried Fish",   "price": 1500, "yield": 5,  "description": "Dried fish for protein"},
-    {"id": "mat_6", "name": "Palm Oil",     "price": 1000, "yield": 20, "description": "Palm oil for cooking"},
-    {"id": "mat_7", "name": "Milk Powder",  "price": 1200, "yield": 15, "description": "Powdered milk"},
-    {"id": "mat_8", "name": "Sugar",        "price": 300,  "yield": 25, "description": "Sugar for sweet dishes"},
+    {
+        "id": "mat_1",
+        "name": "Cassava",
+        "price": 500,
+        "yield": 10,
+        "description": "Raw cassava for fufu production",
+    },
+    {
+        "id": "mat_2",
+        "name": "Raw Rice",
+        "price": 800,
+        "yield": 15,
+        "description": "Raw rice for cooking",
+    },
+    {
+        "id": "mat_3",
+        "name": "Corn",
+        "price": 400,
+        "yield": 12,
+        "description": "Raw corn for various dishes",
+    },
+    {
+        "id": "mat_4",
+        "name": "Peanuts",
+        "price": 600,
+        "yield": 8,
+        "description": "Raw peanuts for oil and sauce",
+    },
+    {
+        "id": "mat_5",
+        "name": "Dried Fish",
+        "price": 1500,
+        "yield": 5,
+        "description": "Dried fish for protein",
+    },
+    {
+        "id": "mat_6",
+        "name": "Palm Oil",
+        "price": 1000,
+        "yield": 20,
+        "description": "Palm oil for cooking",
+    },
+    {
+        "id": "mat_7",
+        "name": "Milk Powder",
+        "price": 1200,
+        "yield": 15,
+        "description": "Powdered milk",
+    },
+    {
+        "id": "mat_8",
+        "name": "Sugar",
+        "price": 300,
+        "yield": 25,
+        "description": "Sugar for sweet dishes",
+    },
 ]
 
 # Finished products that can be sold
 FINISHED_PRODUCTS = [
-    {"id": "prod_1", "name": "Fufu",            "sell_price": 1500, "raw_material": "Cassava",    "description": "Traditional fufu"},
-    {"id": "prod_2", "name": "Cooked Rice",     "sell_price": 2000, "raw_material": "Raw Rice",   "description": "Cooked rice"},
-    {"id": "prod_3", "name": "Corn Flour",      "sell_price": 1200, "raw_material": "Corn",       "description": "Corn flour"},
-    {"id": "prod_4", "name": "Peanut Butter",   "sell_price": 2500, "raw_material": "Peanuts",    "description": "Peanut butter"},
-    {"id": "prod_5", "name": "Smoked Fish",     "sell_price": 3000, "raw_material": "Dried Fish", "description": "Smoked fish"},
-    {"id": "prod_6", "name": "Refined Oil",     "sell_price": 1800, "raw_material": "Palm Oil",   "description": "Refined palm oil"},
-    {"id": "prod_7", "name": "Reconstituted Milk", "sell_price": 1500, "raw_material": "Milk Powder", "description": "Reconstituted milk"},
-    {"id": "prod_8", "name": "Sugar Syrup",     "sell_price": 800,  "raw_material": "Sugar",      "description": "Sugar syrup"},
+    {
+        "id": "prod_1",
+        "name": "Fufu",
+        "sell_price": 1500,
+        "raw_material": "Cassava",
+        "description": "Traditional fufu",
+    },
+    {
+        "id": "prod_2",
+        "name": "Cooked Rice",
+        "sell_price": 2000,
+        "raw_material": "Raw Rice",
+        "description": "Cooked rice",
+    },
+    {
+        "id": "prod_3",
+        "name": "Corn Flour",
+        "sell_price": 1200,
+        "raw_material": "Corn",
+        "description": "Corn flour",
+    },
+    {
+        "id": "prod_4",
+        "name": "Peanut Butter",
+        "sell_price": 2500,
+        "raw_material": "Peanuts",
+        "description": "Peanut butter",
+    },
+    {
+        "id": "prod_5",
+        "name": "Smoked Fish",
+        "sell_price": 3000,
+        "raw_material": "Dried Fish",
+        "description": "Smoked fish",
+    },
+    {
+        "id": "prod_6",
+        "name": "Refined Oil",
+        "sell_price": 1800,
+        "raw_material": "Palm Oil",
+        "description": "Refined palm oil",
+    },
+    {
+        "id": "prod_7",
+        "name": "Reconstituted Milk",
+        "sell_price": 1500,
+        "raw_material": "Milk Powder",
+        "description": "Reconstituted milk",
+    },
+    {
+        "id": "prod_8",
+        "name": "Sugar Syrup",
+        "sell_price": 800,
+        "raw_material": "Sugar",
+        "description": "Sugar syrup",
+    },
 ]
 
 # Random events that can happen during the game
 RANDOM_EVENTS = [
-    {"name": "🌧️ Heavy Rain",            "description": "Heavy rain disrupts transportation",     "effect": "loss", "min": 500,  "max": 2000,  "probability": 0.15},
-    {"name": "🎉 Local Festival",         "description": "Local festival increases demand",          "effect": "gain", "min": 1000, "max": 5000,  "probability": 0.10},
-    {"name": "🚛 Truck Breakdown",        "description": "Truck breakdown delays delivery",           "effect": "loss", "min": 1000, "max": 3000,  "probability": 0.12},
-    {"name": "💰 Government Subsidy",     "description": "Government subsidy for small businesses",   "effect": "gain", "min": 2000, "max": 8000,  "probability": 0.08},
-    {"name": "🔥 Market Fire",            "description": "Fire in the market damages inventory",      "effect": "loss", "min": 2000, "max": 5000,  "probability": 0.07},
-    {"name": "🤝 Successful Partnership", "description": "Successful partnership brings new customers","effect": "gain", "min": 3000, "max": 10000, "probability": 0.06},
-    {"name": "📈 Price Surge",            "description": "Prices go up, your inventory gains value",  "effect": "gain", "min": 1500, "max": 6000,  "probability": 0.10},
-    {"name": "📉 Price Crash",            "description": "Market crash, prices drop significantly",    "effect": "loss", "min": 1000, "max": 4000,  "probability": 0.10},
-    {"name": "🎁 Patron Donation",        "description": "A benefactor donates to your business",     "effect": "gain", "min": 5000, "max": 15000, "probability": 0.04},
-    {"name": "⚠️ Health Inspection",      "description": "Health inspection finds violations",        "effect": "loss", "min": 500,  "max": 2000,  "probability": 0.13},
+    {
+        "name": "🌧️ Heavy Rain",
+        "description": "Heavy rain disrupts transportation",
+        "effect": "loss",
+        "min": 500,
+        "max": 2000,
+        "probability": 0.15,
+    },
+    {
+        "name": "🎉 Local Festival",
+        "description": "Local festival increases demand",
+        "effect": "gain",
+        "min": 1000,
+        "max": 5000,
+        "probability": 0.10,
+    },
+    {
+        "name": "🚛 Truck Breakdown",
+        "description": "Truck breakdown delays delivery",
+        "effect": "loss",
+        "min": 1000,
+        "max": 3000,
+        "probability": 0.12,
+    },
+    {
+        "name": "💰 Government Subsidy",
+        "description": "Government subsidy for small businesses",
+        "effect": "gain",
+        "min": 2000,
+        "max": 8000,
+        "probability": 0.08,
+    },
+    {
+        "name": "🔥 Market Fire",
+        "description": "Fire in the market damages inventory",
+        "effect": "loss",
+        "min": 2000,
+        "max": 5000,
+        "probability": 0.07,
+    },
+    {
+        "name": "🤝 Successful Partnership",
+        "description": "Successful partnership brings new customers",
+        "effect": "gain",
+        "min": 3000,
+        "max": 10000,
+        "probability": 0.06,
+    },
+    {
+        "name": "📈 Price Surge",
+        "description": "Prices go up, your inventory gains value",
+        "effect": "gain",
+        "min": 1500,
+        "max": 6000,
+        "probability": 0.10,
+    },
+    {
+        "name": "📉 Price Crash",
+        "description": "Market crash, prices drop significantly",
+        "effect": "loss",
+        "min": 1000,
+        "max": 4000,
+        "probability": 0.10,
+    },
+    {
+        "name": "🎁 Patron Donation",
+        "description": "A benefactor donates to your business",
+        "effect": "gain",
+        "min": 5000,
+        "max": 15000,
+        "probability": 0.04,
+    },
+    {
+        "name": "⚠️ Health Inspection",
+        "description": "Health inspection finds violations",
+        "effect": "loss",
+        "min": 500,
+        "max": 2000,
+        "probability": 0.13,
+    },
 ]
 
 
 class GameService:
     """Manages the KSell game state and logic."""
 
-    DICE_BASE = 100  # FCFA per dice point; range: dice 2 → 200 FCFA, dice 12 → 1,200 FCFA
+    DICE_BASE = (
+        100  # FCFA per dice point; range: dice 2 → 200 FCFA, dice 12 → 1,200 FCFA
+    )
 
     def __init__(self):
         self.table = Table()
@@ -77,7 +240,9 @@ class GameService:
         self.events_log: List[Dict[str, Any]] = []
         self.current_dice_price: int = 0  # player's price this round
 
-    def start_game(self, player_username: str, player_fortune: float = 10000.0) -> Dict[str, Any]:
+    def start_game(
+        self, player_username: str, player_fortune: float = 10000.0
+    ) -> Dict[str, Any]:
         """Start a new game with the given player.
 
         Args:
@@ -98,9 +263,9 @@ class GameService:
         self.current_player.basic_stock = 0  # legacy field (unused now)
         self.current_player.inventory = []
         self.current_player.finished_products = [
-            {"id": "prod_1", "name": "Fufu",       "quantity": 20, "sell_price": 600},
+            {"id": "prod_1", "name": "Fufu", "quantity": 20, "sell_price": 600},
             {"id": "prod_2", "name": "Cooked Rice", "quantity": 20, "sell_price": 800},
-            {"id": "prod_3", "name": "Corn Flour",  "quantity": 20, "sell_price": 500},
+            {"id": "prod_3", "name": "Corn Flour", "quantity": 20, "sell_price": 500},
         ]
 
         # Add player to table
@@ -116,7 +281,9 @@ class GameService:
             nb_tools = random.randint(0, 2)
             for _ in range(nb_tools):
                 d = random.choice(tool_opts)
-                tool = Tool(id=d["id"], name=d["name"], cost=d["cost"], capacity=d["capacity"])
+                tool = Tool(
+                    id=d["id"], name=d["name"], cost=d["cost"], capacity=d["capacity"]
+                )
                 ai_player.add_tool(tool)
             self.table.add_player(ai_player)
 
@@ -129,7 +296,9 @@ class GameService:
         # AI players immediately post orders for round 0
         self._ai_turn()
         self.game_log.append(f"🎮 Game started with {len(self.table.players)} players!")
-        self.game_log.append(f"👤 {player_username} | 💰 {player_fortune:,.0f} FCFA | 🎲 Your price: {self.current_dice_price:,} FCFA/unit")
+        self.game_log.append(
+            f"👤 {player_username} | 💰 {player_fortune:,.0f} FCFA | 🎲 Your price: {self.current_dice_price:,} FCFA/unit"
+        )
         self.game_log.append(f"📊 Markets: {len(markets)}")
 
         return {
@@ -164,13 +333,17 @@ class GameService:
             f"--- Round {result['round']} | 🎲 Dice: {result['dice']['die1']}+{result['dice']['die2']}={result['dice']['total']} ({result['condition']}) ---"
         )
         if event_result:
-            self.game_log.append(f"⚡ Event: {event_result['name']} - {event_result['description']}")
+            self.game_log.append(
+                f"⚡ Event: {event_result['name']} - {event_result['description']}"
+            )
 
         # Update dice price for this round
         if self.current_player:
             dice_total = result["dice"]["total"]
             self.current_dice_price = dice_total * self.DICE_BASE
-            self.game_log.append(f"🎲 Dice: {result['dice']['die1']}+{result['dice']['die2']}={dice_total} → Your price: {self.current_dice_price:,} FCFA/unit")
+            self.game_log.append(
+                f"🎲 Dice: {result['dice']['die1']}+{result['dice']['die2']}={dice_total} → Your price: {self.current_dice_price:,} FCFA/unit"
+            )
 
         return {
             "success": True,
@@ -200,7 +373,7 @@ class GameService:
         market_board = self.table.markets[market_index]
         product = market_board.product
 
-        finished = getattr(self.current_player, 'finished_products', [])
+        finished = getattr(self.current_player, "finished_products", [])
         product_entry = next((p for p in finished if p["name"] == product), None)
         if not product_entry or product_entry["quantity"] < quantity:
             have = product_entry["quantity"] if product_entry else 0
@@ -213,7 +386,9 @@ class GameService:
         if product_entry["quantity"] == 0:
             self.current_player.finished_products.remove(product_entry)
 
-        market_board.post_sell_order(self.current_player.username, quantity, self.current_dice_price)
+        market_board.post_sell_order(
+            self.current_player.username, quantity, self.current_dice_price
+        )
 
         fixed = market_board.market_fixed_price
         if self.current_dice_price <= fixed:
@@ -221,13 +396,15 @@ class GameService:
         else:
             note = f"⏳ Your price ({self.current_dice_price:,}) > market fixed ({fixed:,}) → only other buyers can take it"
 
-        self.game_log.append(f"📋 Sell {quantity}x {product} @ {self.current_dice_price:,} at {market_board.location.name}. {note}")
+        self.game_log.append(
+            f"📋 Sell {quantity}x {product} @ {self.current_dice_price:,} at {market_board.location.name}. {note}"
+        )
 
         return {
             "success": True,
             "message": f"Listed {quantity}x {product} @ {self.current_dice_price:,} FCFA/unit. {note}",
             "player_fortune": self.current_player.balance,
-            "finished_products": getattr(self.current_player, 'finished_products', []),
+            "finished_products": getattr(self.current_player, "finished_products", []),
             "markets": [m.to_dict() for m in self.table.markets],
             "player_rank": self._get_player_rank(),
             "leaderboard": self.table.get_leaderboard(),
@@ -245,25 +422,36 @@ class GameService:
             return {"success": False, "error": "Roll the dice first to get your price."}
 
         market_board = self.table.markets[market_index]
-        result = market_board.execute_buy(self.current_player.username, quantity, self.current_dice_price)
+        result = market_board.execute_buy(
+            self.current_player.username, quantity, self.current_dice_price
+        )
 
         if result["success"]:
             total_cost = result["total_cost"]
             if not self.current_player.can_afford(total_cost):
-                return {"success": False, "error": f"Not enough fortune. Need {total_cost:,} FCFA."}
+                return {
+                    "success": False,
+                    "error": f"Not enough fortune. Need {total_cost:,} FCFA.",
+                }
 
             self.current_player.subtract_fortune(total_cost)
 
             # Add product to finished_products inventory
             product = market_board.product
             sell_price = market_board.market_fixed_price
-            fp = getattr(self.current_player, 'finished_products', [])
+            fp = getattr(self.current_player, "finished_products", [])
             entry = next((p for p in fp if p["name"] == product), None)
             if entry:
                 entry["quantity"] += result["units_bought"]
             else:
-                fp.append({"id": f"bought_{product}", "name": product,
-                           "quantity": result["units_bought"], "sell_price": sell_price})
+                fp.append(
+                    {
+                        "id": f"bought_{product}",
+                        "name": product,
+                        "quantity": result["units_bought"],
+                        "sell_price": sell_price,
+                    }
+                )
             self.current_player.finished_products = fp
 
             # Pay sellers
@@ -277,8 +465,10 @@ class GameService:
                 f"🛍 Bought {result['units_bought']}x {product} at avg {result['avg_price']:,} FCFA "
                 f"(total {total_cost:,}) at {market_board.location.name}"
             )
-            msg = (f"Bought {result['units_bought']}x {product} for {total_cost:,} FCFA "
-                   f"(avg {result['avg_price']:,}/unit).")
+            msg = (
+                f"Bought {result['units_bought']}x {product} for {total_cost:,} FCFA "
+                f"(avg {result['avg_price']:,}/unit)."
+            )
             if result["unfilled"] > 0:
                 msg += f" {result['unfilled']} units unfilled."
         else:
@@ -288,7 +478,7 @@ class GameService:
             "success": result["success"],
             "message": msg,
             "player_fortune": self.current_player.balance,
-            "finished_products": getattr(self.current_player, 'finished_products', []),
+            "finished_products": getattr(self.current_player, "finished_products", []),
             "markets": [m.to_dict() for m in self.table.markets],
             "player_rank": self._get_player_rank(),
             "leaderboard": self.table.get_leaderboard(),
@@ -307,7 +497,11 @@ class GameService:
                         f"✅ Market bought {s['quantity']} units from {s['seller']} "
                         f"@ {s['price']:,} FCFA → net {s['net_revenue']:,} FCFA"
                     )
-                elif s["seller"] == self.current_player.username if self.current_player else False:
+                elif (
+                    s["seller"] == self.current_player.username
+                    if self.current_player
+                    else False
+                ):
                     self.current_player.add_fortune(s["net_revenue"])
 
     def buy_tool(self, tool_index: int) -> Dict[str, Any]:
@@ -355,7 +549,13 @@ class GameService:
             return {"success": False, "error": "Invalid card index."}
 
         d = card_opts[card_index]
-        card = Card(id=d["id"], name=d["name"], description=d.get("description", ""), value=d["value"], price=d["price"])
+        card = Card(
+            id=d["id"],
+            name=d["name"],
+            description=d.get("description", ""),
+            value=d["value"],
+            price=d["price"],
+        )
 
         if not self.current_player.can_afford(card.price):
             return {
@@ -378,7 +578,9 @@ class GameService:
             "log": self._get_recent_log(10),
         }
 
-    def buy_raw_material(self, material_index: int, quantity: int = 1) -> Dict[str, Any]:
+    def buy_raw_material(
+        self, material_index: int, quantity: int = 1
+    ) -> Dict[str, Any]:
         """Buy raw materials for production.
 
         Args:
@@ -409,7 +611,7 @@ class GameService:
 
         self.current_player.subtract_fortune(total_cost)
 
-        if not hasattr(self.current_player, 'inventory'):
+        if not hasattr(self.current_player, "inventory"):
             self.current_player.inventory = []
 
         found = False
@@ -420,14 +622,18 @@ class GameService:
                 break
 
         if not found:
-            self.current_player.inventory.append({
-                "id": material["id"],
-                "name": material["name"],
-                "quantity": quantity,
-                "yield": material["yield"],
-            })
+            self.current_player.inventory.append(
+                {
+                    "id": material["id"],
+                    "name": material["name"],
+                    "quantity": quantity,
+                    "yield": material["yield"],
+                }
+            )
 
-        self.game_log.append(f"📦 Bought {quantity}x {material['name']} for {total_cost:,} FCFA")
+        self.game_log.append(
+            f"📦 Bought {quantity}x {material['name']} for {total_cost:,} FCFA"
+        )
 
         return {
             "success": True,
@@ -469,9 +675,12 @@ class GameService:
                 break
 
         if product_yield is None:
-            return {"success": False, "error": f"Could not find raw material for {product['name']}."}
+            return {
+                "success": False,
+                "error": f"Could not find raw material for {product['name']}.",
+            }
 
-        if not hasattr(self.current_player, 'inventory'):
+        if not hasattr(self.current_player, "inventory"):
             self.current_player.inventory = []
 
         material_qty = 0
@@ -493,7 +702,7 @@ class GameService:
                     self.current_player.inventory.remove(item)
                 break
 
-        if not hasattr(self.current_player, 'finished_products'):
+        if not hasattr(self.current_player, "finished_products"):
             self.current_player.finished_products = []
 
         found = False
@@ -504,14 +713,18 @@ class GameService:
                 break
 
         if not found:
-            self.current_player.finished_products.append({
-                "id": product["id"],
-                "name": product["name"],
-                "quantity": quantity,
-                "sell_price": product["sell_price"],
-            })
+            self.current_player.finished_products.append(
+                {
+                    "id": product["id"],
+                    "name": product["name"],
+                    "quantity": quantity,
+                    "sell_price": product["sell_price"],
+                }
+            )
 
-        self.game_log.append(f"🏭 Produced {quantity}x {product['name']} from {quantity}x {required_material}")
+        self.game_log.append(
+            f"🏭 Produced {quantity}x {product['name']} from {quantity}x {required_material}"
+        )
 
         return {
             "success": True,
@@ -524,7 +737,9 @@ class GameService:
             "log": self._get_recent_log(10),
         }
 
-    def sell_finished_product(self, market_index: int, product_index: int, quantity: int) -> Dict[str, Any]:
+    def sell_finished_product(
+        self, market_index: int, product_index: int, quantity: int
+    ) -> Dict[str, Any]:
         """Sell finished products at a market.
 
         Args:
@@ -541,14 +756,19 @@ class GameService:
             return {"success": False, "error": "No active player."}
         if market_index < 0 or market_index >= len(self.table.markets):
             return {"success": False, "error": "Invalid market index."}
-        if product_index < 0 or product_index >= len(self.current_player.finished_products):
+        if product_index < 0 or product_index >= len(
+            self.current_player.finished_products
+        ):
             return {"success": False, "error": "Invalid product index."}
 
         market_board = self.table.markets[market_index]
         product = self.current_player.finished_products[product_index]
 
         if quantity > product["quantity"]:
-            return {"success": False, "error": f"Not enough {product['name']}. Have {product['quantity']}, want to sell {quantity}."}
+            return {
+                "success": False,
+                "error": f"Not enough {product['name']}. Have {product['quantity']}, want to sell {quantity}.",
+            }
 
         base_price = product["sell_price"]
         revenue = base_price * quantity
@@ -573,7 +793,12 @@ class GameService:
         return {
             "success": True,
             "message": f"Sold {quantity}x {product['name']} for {net_revenue:,.0f} FCFA!",
-            "sale_result": {**sale_result, "revenue": revenue, "tax": tax, "net_revenue": net_revenue},
+            "sale_result": {
+                **sale_result,
+                "revenue": revenue,
+                "tax": tax,
+                "net_revenue": net_revenue,
+            },
             "player_fortune": self.current_player.balance,
             "finished_products": self.current_player.finished_products,
             "markets": [m.to_dict() for m in self.table.markets],
@@ -594,7 +819,9 @@ class GameService:
         self.is_game_active = False
 
         if result["winner"]:
-            self.game_log.append(f"🏆 Game over! Winner: {result['winner']['username']} with {result['winner']['balance']:,.0f} FCFA!")
+            self.game_log.append(
+                f"🏆 Game over! Winner: {result['winner']['username']} with {result['winner']['balance']:,.0f} FCFA!"
+            )
         else:
             self.game_log.append("Game over! No players remaining.")
 
@@ -630,13 +857,13 @@ class GameService:
         if not self.current_player:
             return {"error": "No active player."}
 
-        inventory = getattr(self.current_player, 'inventory', [])
-        finished = getattr(self.current_player, 'finished_products', [])
+        # inventory = getattr(self.current_player, "inventory", [])
+        # finished = getattr(self.current_player, "finished_products", [])
 
         return {
             "username": self.current_player.username,
             "balance": self.current_player.balance,
-            "basic_stock": getattr(self.current_player, 'basic_stock', 0),
+            "basic_stock": getattr(self.current_player, "basic_stock", 0),
             "stars": self.current_player.star_count,
             "competitions": self.current_player.competition_count,
             "followers": self.current_player.follower_count,
@@ -644,8 +871,8 @@ class GameService:
             "tools": [asdict(t) for t in self.current_player.tools],
             "total_capacity": self.current_player.get_total_capacity(),
             "rank": self._get_player_rank(),
-            "inventory": getattr(self.current_player, 'inventory', []),
-            "finished_products": getattr(self.current_player, 'finished_products', []),
+            "inventory": getattr(self.current_player, "inventory", []),
+            "finished_products": getattr(self.current_player, "finished_products", []),
         }
 
     def get_leaderboard(self) -> List[Dict[str, Any]]:
@@ -673,27 +900,49 @@ class GameService:
     def _ai_turn(self) -> None:
         """Simulate AI players posting buy or sell orders for their products."""
         for player in self.table.players:
-            if player.username == (self.current_player.username if self.current_player else ""):
+            if player.username == (
+                self.current_player.username if self.current_player else ""
+            ):
                 continue
             if not self.table.markets:
                 continue
             ai_dice = random.randint(2, 12)
             ai_price = ai_dice * self.DICE_BASE
 
-            if not hasattr(player, 'finished_products'):
+            if not hasattr(player, "finished_products"):
                 player.finished_products = []
             if not player.finished_products:
-                products = ["Fufu", "Cooked Rice", "Corn Flour", "Peanut Butter", "Smoked Fish"]
+                products = [
+                    "Fufu",
+                    "Cooked Rice",
+                    "Corn Flour",
+                    "Peanut Butter",
+                    "Smoked Fish",
+                ]
                 player.finished_products = [
-                    {"id": f"ai_{p}", "name": p, "quantity": random.randint(5, 30), "sell_price": 1000}
+                    {
+                        "id": f"ai_{p}",
+                        "name": p,
+                        "quantity": random.randint(5, 30),
+                        "sell_price": 1000,
+                    }
                     for p in random.sample(products, k=random.randint(1, 3))
                 ]
 
             action = random.choice(["sell", "sell", "buy", "nothing"])
 
             if action == "sell":
-                for market_board in random.sample(self.table.markets, len(self.table.markets)):
-                    prod_entry = next((p for p in player.finished_products if p["name"] == market_board.product), None)
+                for market_board in random.sample(
+                    self.table.markets, len(self.table.markets)
+                ):
+                    prod_entry = next(
+                        (
+                            p
+                            for p in player.finished_products
+                            if p["name"] == market_board.product
+                        ),
+                        None,
+                    )
                     if prod_entry and prod_entry["quantity"] > 0:
                         qty = random.randint(1, min(15, prod_entry["quantity"]))
                         market_board.post_sell_order(player.username, qty, ai_price)
@@ -708,14 +957,25 @@ class GameService:
                 result = market_board.execute_buy(player.username, qty, ai_price)
                 if result["success"]:
                     player.subtract_fortune(result["total_cost"])
-                    prod_entry = next((p for p in player.finished_products if p["name"] == market_board.product), None)
+                    prod_entry = next(
+                        (
+                            p
+                            for p in player.finished_products
+                            if p["name"] == market_board.product
+                        ),
+                        None,
+                    )
                     if prod_entry:
                         prod_entry["quantity"] += result["units_bought"]
                     else:
-                        player.finished_products.append({
-                            "id": f"ai_{market_board.product}", "name": market_board.product,
-                            "quantity": result["units_bought"], "sell_price": market_board.market_fixed_price
-                        })
+                        player.finished_products.append(
+                            {
+                                "id": f"ai_{market_board.product}",
+                                "name": market_board.product,
+                                "quantity": result["units_bought"],
+                                "sell_price": market_board.market_fixed_price,
+                            }
+                        )
 
     def _check_random_event(self) -> Optional[Dict[str, Any]]:
         """Check for random events that can affect the player.
@@ -728,7 +988,7 @@ class GameService:
 
         # Weighted random selection of events
         events = RANDOM_EVENTS
-        weights = [e["probability"] for e in events]
+        # weights = [e["probability"] for e in events]
 
         # Check if any event triggers
         triggered_events = []
@@ -749,12 +1009,14 @@ class GameService:
             self.current_player.subtract_fortune(amount)
             self.game_log.append(f"  💔 -{amount:,} FCFA from {event['name']}")
 
-        self.events_log.append({
-            "round": self.table.current_round,
-            "event": event,
-            "amount": amount,
-            "effect": event["effect"],
-        })
+        self.events_log.append(
+            {
+                "round": self.table.current_round,
+                "event": event,
+                "amount": amount,
+                "effect": event["effect"],
+            }
+        )
 
         return {
             "name": event["name"],

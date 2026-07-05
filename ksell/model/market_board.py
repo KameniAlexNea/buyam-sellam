@@ -22,7 +22,9 @@ from typing import Any, Dict, List, Optional
 from ksell.model.dice import Dice
 from ksell.pojo.market import Market
 
-DICE_BASE = 100  # FCFA per dice point  (dice range 2-12 → price range 200-1200 FCFA/unit)
+DICE_BASE = (
+    100  # FCFA per dice point  (dice range 2-12 → price range 200-1200 FCFA/unit)
+)
 
 
 class MarketBoard:
@@ -43,7 +45,9 @@ class MarketBoard:
         self.passing_players: List[str] = []
 
     def _init_round(self) -> None:
-        self.market_supply: int = random.randint(self.location.min_qty, self.location.max_qty)
+        self.market_supply: int = random.randint(
+            self.location.min_qty, self.location.max_qty
+        )
         self.sell_orders: List[Dict[str, Any]] = []
         self.completed_trades: List[Dict[str, Any]] = []
         self.selling_players: List[str] = []
@@ -54,19 +58,25 @@ class MarketBoard:
     # Order book
     # ------------------------------------------------------------------
 
-    def post_sell_order(self, username: str, quantity: int, dice_price: int) -> Dict[str, Any]:
+    def post_sell_order(
+        self, username: str, quantity: int, dice_price: int
+    ) -> Dict[str, Any]:
         if quantity <= 0:
             return {"success": False, "error": "Quantity must be positive"}
-        self.sell_orders.append({
-            "username": username,
-            "quantity": quantity,
-            "remaining": quantity,
-            "price": dice_price,
-        })
+        self.sell_orders.append(
+            {
+                "username": username,
+                "quantity": quantity,
+                "remaining": quantity,
+                "price": dice_price,
+            }
+        )
         self.sell_orders.sort(key=lambda x: x["price"])
         return {"success": True}
 
-    def execute_buy(self, username: str, quantity: int, dice_price: int) -> Dict[str, Any]:
+    def execute_buy(
+        self, username: str, quantity: int, dice_price: int
+    ) -> Dict[str, Any]:
         if quantity <= 0:
             return {"success": False, "error": "Quantity must be positive"}
 
@@ -88,10 +98,21 @@ class MarketBoard:
             remaining -= buy_qty
             total_cost += cost
             units_bought += buy_qty
-            trades.append({"buyer": username, "seller": order["username"],
-                           "quantity": buy_qty, "price": order["price"], "total": cost})
+            trades.append(
+                {
+                    "buyer": username,
+                    "seller": order["username"],
+                    "quantity": buy_qty,
+                    "price": order["price"],
+                    "total": cost,
+                }
+            )
 
-        if remaining > 0 and self.market_supply > 0 and self.market_fixed_price <= dice_price:
+        if (
+            remaining > 0
+            and self.market_supply > 0
+            and self.market_fixed_price <= dice_price
+        ):
             buy_qty = min(remaining, self.market_supply)
             cost = buy_qty * self.market_fixed_price
             self.market_supply -= buy_qty
@@ -99,14 +120,24 @@ class MarketBoard:
             remaining -= buy_qty
             total_cost += cost
             units_bought += buy_qty
-            trades.append({"buyer": username, "seller": "market",
-                           "quantity": buy_qty, "price": self.market_fixed_price, "total": cost})
+            trades.append(
+                {
+                    "buyer": username,
+                    "seller": "market",
+                    "quantity": buy_qty,
+                    "price": self.market_fixed_price,
+                    "total": cost,
+                }
+            )
 
         self.sell_orders = [o for o in self.sell_orders if o["remaining"] > 0]
         self.completed_trades.extend(trades)
 
         if units_bought == 0:
-            return {"success": False, "error": f"No stock available at your dice price ({dice_price:,} FCFA)"}
+            return {
+                "success": False,
+                "error": f"No stock available at your dice price ({dice_price:,} FCFA)",
+            }
 
         avg = round(total_cost / units_bought)
         return {
@@ -126,15 +157,17 @@ class MarketBoard:
                 qty = order["remaining"]
                 revenue = qty * order["price"]
                 tax = int(revenue * self.location.tax_rate)
-                settled.append({
-                    "seller": order["username"],
-                    "quantity": qty,
-                    "price": order["price"],
-                    "revenue": revenue,
-                    "tax": tax,
-                    "net_revenue": revenue - tax,
-                    "product": self.product,
-                })
+                settled.append(
+                    {
+                        "seller": order["username"],
+                        "quantity": qty,
+                        "price": order["price"],
+                        "revenue": revenue,
+                        "tax": tax,
+                        "net_revenue": revenue - tax,
+                        "product": self.product,
+                    }
+                )
                 order["remaining"] = 0
         self.sell_orders = [o for o in self.sell_orders if o["remaining"] > 0]
         return settled
@@ -162,8 +195,12 @@ class MarketBoard:
             "remaining_qty": self.market_supply,
             "location": asdict(self.location),
             "sell_orders": [
-                {"username": o["username"], "quantity": o["quantity"],
-                 "remaining": o["remaining"], "price": o["price"]}
+                {
+                    "username": o["username"],
+                    "quantity": o["quantity"],
+                    "remaining": o["remaining"],
+                    "price": o["price"],
+                }
                 for o in self.sell_orders
             ],
             "passing_players": self.passing_players,

@@ -26,7 +26,9 @@ def create_verification_page(user_service: UserService):
                     placeholder="Enter the 6-digit code",
                     info="Check your email for the verification code",
                 )
-                verify_btn = gr.Button("✅ Verify", variant="primary", elem_id="verify-btn")
+                verify_btn = gr.Button(
+                    "✅ Verify", variant="primary", elem_id="verify-btn"
+                )
 
         verify_status = gr.Markdown(visible=False, elem_id="verify-status")
 

@@ -3,7 +3,11 @@
 import gradio as gr
 
 from ksell.services.user_service import UserService
-from ksell.utils.helpers import get_country_list, get_profile_options, get_gender_options
+from ksell.utils.helpers import (
+    get_country_list,
+    get_profile_options,
+    get_gender_options,
+)
 
 
 def create_register_page(user_service: UserService):
@@ -31,7 +35,9 @@ def create_register_page(user_service: UserService):
 
     with gr.Column(elem_id="register-container"):
         gr.Markdown("## 📝 KSell Entreprise - Register")
-        gr.Markdown("Create your account to start playing the business simulation game.")
+        gr.Markdown(
+            "Create your account to start playing the business simulation game."
+        )
 
         with gr.Row():
             with gr.Column():
@@ -76,13 +82,32 @@ def create_register_page(user_service: UserService):
                     info="Your business role in the game",
                 )
 
-        reg_btn = gr.Button("🚀 Create Account", variant="primary", elem_id="register-btn")
+        reg_btn = gr.Button(
+            "🚀 Create Account", variant="primary", elem_id="register-btn"
+        )
         reg_status = gr.Markdown(visible=False, elem_id="register-status")
 
         reg_btn.click(
             fn=on_register,
-            inputs=[reg_username, reg_password, reg_email, reg_country, reg_birth_date, reg_gender, reg_profile],
+            inputs=[
+                reg_username,
+                reg_password,
+                reg_email,
+                reg_country,
+                reg_birth_date,
+                reg_gender,
+                reg_profile,
+            ],
             outputs=[reg_status],
         )
 
-    return reg_username, reg_password, reg_email, reg_country, reg_birth_date, reg_gender, reg_profile, reg_btn
+    return (
+        reg_username,
+        reg_password,
+        reg_email,
+        reg_country,
+        reg_birth_date,
+        reg_gender,
+        reg_profile,
+        reg_btn,
+    )

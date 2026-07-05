@@ -15,4 +15,3 @@ class Constraint:
     def test(self, player_data: Dict[str, Any]) -> bool:
         """Test if a player meets this constraint. Default always passes."""
         return True
-

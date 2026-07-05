@@ -3,7 +3,7 @@
 Manages user-related operations: registration, login, profile updates.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from ksell.pojo.user import User
 from ksell.services.api_service import ApiService
@@ -16,7 +16,9 @@ class UserService:
         self.api = api_service or ApiService()
         self.current_user: Optional[User] = None
 
-    def login(self, pseudo: str, password: str, auto_verify: bool = False) -> Tuple[bool, str, Optional[User]]:
+    def login(
+        self, pseudo: str, password: str, auto_verify: bool = False
+    ) -> Tuple[bool, str, Optional[User]]:
         """Log in a user.
 
         Args:
@@ -94,7 +96,7 @@ class UserService:
         self,
         username: str,
         email: str = None,
-        profile: str = None,
+        profil: str = None,
         country: str = None,
     ) -> Tuple[bool, str]:
         """Update user profile.
@@ -115,8 +117,10 @@ class UserService:
             self.current_user.email = email
         if profil:
             self.current_user.profil = profil
-        if pays:
-            self.current_user.pays = pays
+        if country:
+            self.current_user.country = country
+        if username:
+            self.current_user.username = username
 
         success = self.api.update_user(self.current_user)
         if success:

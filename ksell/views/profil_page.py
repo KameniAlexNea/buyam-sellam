@@ -10,7 +10,7 @@ from ksell.services.user_service import UserService
 from ksell.utils.helpers import format_fortune
 
 
-def create_profile_page(game_service: GameService, user_service: UserService):
+def create_profil_page(game_service: GameService, user_service: UserService):
     """Create the profile page with user stats and management."""
 
     def on_view_profile():
@@ -19,30 +19,32 @@ def create_profile_page(game_service: GameService, user_service: UserService):
             return gr.update(visible=True, value=f"❌ {status['error']}")
 
         md = f"""
-**👤 Profile: {status['username']}**
+**👤 Profile: {status["username"]}**
 
 | Stat | Value |
 |------|-------|
-| 💰 Fortune | {format_fortune(status['balance'])} |
-| ⭐ Stars | {status['stars']} |
-| 🎮 Competitions | {status['competitions']} |
-| 👥 Subscribers | {status['followers']} |
-| 🃏 Cards | {len(status['cards'])} |
-| 🔧 Tools | {len(status['tools'])} |
-| 📦 Total Capacity | {status['total_capacity']:,} units |
-| 🏆 Rank | #{status['rank']} |
+| 💰 Fortune | {format_fortune(status["balance"])} |
+| ⭐ Stars | {status["stars"]} |
+| 🎮 Competitions | {status["competitions"]} |
+| 👥 Subscribers | {status["followers"]} |
+| 🃏 Cards | {len(status["cards"])} |
+| 🔧 Tools | {len(status["tools"])} |
+| 📦 Total Capacity | {status["total_capacity"]:,} units |
+| 🏆 Rank | #{status["rank"]} |
 
 **🔧 Tools:**
-{chr(10).join(f'- {t["name"]} (Capacity: {t["capacity"]:,})' for t in status['tools']) or '- None'}
+{chr(10).join(f"- {t['name']} (Capacity: {t['capacity']:,})" for t in status["tools"]) or "- None"}
 
 **🃏 Cards:**
-{', '.join(status['cards']) if status['cards'] else '- None'}
+{", ".join(status["cards"]) if status["cards"] else "- None"}
 """
         return gr.update(visible=True, value=md)
 
     def on_update_profile(email: str, profile: str, country: str):
         success, message = user_service.update_profile(
-            username=user_service.get_current_user().username if user_service.get_current_user() else "",
+            username=user_service.get_current_user().username
+            if user_service.get_current_user()
+            else "",
             email=email,
             profile=profile,
             country=country,
@@ -56,7 +58,9 @@ def create_profile_page(game_service: GameService, user_service: UserService):
         gr.Markdown("## 👤 KSell Entreprise - Profile")
         gr.Markdown("View and manage your player profile, stats, and inventory.")
 
-        view_btn = gr.Button("👁️ View Profile", variant="primary", elem_id="view-profile-btn")
+        view_btn = gr.Button(
+            "👁️ View Profile", variant="primary", elem_id="view-profile-btn"
+        )
         profile_display = gr.Markdown(visible=False, elem_id="profile-display")
 
         # Profile update section
@@ -79,7 +83,11 @@ def create_profile_page(game_service: GameService, user_service: UserService):
                         info="Leave blank to keep current",
                     )
                 with gr.Column():
-                    update_btn = gr.Button("💾 Save Changes", variant="secondary", elem_id="save-profile-btn")
+                    update_btn = gr.Button(
+                        "💾 Save Changes",
+                        variant="secondary",
+                        elem_id="save-profile-btn",
+                    )
 
         update_status = gr.Markdown(visible=False, elem_id="update-status")
 

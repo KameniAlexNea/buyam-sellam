@@ -7,10 +7,12 @@ from typing import Any, Dict, List, Optional
 
 def generate_token(length: int = 6) -> str:
     """Generate a random verification token."""
-    return ''.join(random.choices('0123456789', k=length))
+    return "".join(random.choices("0123456789", k=length))
 
 
-def parse_json_response(response_text: str, keys: Optional[List[str]] = None) -> Dict[str, Any]:
+def parse_json_response(
+    response_text: str, keys: Optional[List[str]] = None
+) -> Dict[str, Any]:
     """Parse JSON string into a dictionary, optionally filtering by keys."""
     try:
         data = json.loads(response_text)
@@ -33,7 +35,7 @@ def format_quantity(value: int) -> str:
 
 def validate_email(email: str) -> bool:
     """Basic email validation."""
-    return '@' in email and '.' in email.split('@')[-1]
+    return "@" in email and "." in email.split("@")[-1]
 
 
 def validate_username(username: str) -> bool:
@@ -84,31 +86,91 @@ def get_profile_options() -> List[str]:
 
 def get_market_location_options() -> List[Dict[str, Any]]:
     return [
-        {"id": "lieu_1", "name": "Central Market",  "min_qty": 50,  "max_qty": 200,  "tax_rate": 0.05},
-        {"id": "lieu_2", "name": "North Market",    "min_qty": 30,  "max_qty": 150,  "tax_rate": 0.08},
-        {"id": "lieu_3", "name": "South Market",    "min_qty": 40,  "max_qty": 180,  "tax_rate": 0.06},
-        {"id": "lieu_4", "name": "Commercial Zone", "min_qty": 100, "max_qty": 500,  "tax_rate": 0.03},
-        {"id": "lieu_5", "name": "Free Port",       "min_qty": 200, "max_qty": 1000, "tax_rate": 0.02},
+        {
+            "id": "lieu_1",
+            "name": "Central Market",
+            "min_qty": 50,
+            "max_qty": 200,
+            "tax_rate": 0.05,
+        },
+        {
+            "id": "lieu_2",
+            "name": "North Market",
+            "min_qty": 30,
+            "max_qty": 150,
+            "tax_rate": 0.08,
+        },
+        {
+            "id": "lieu_3",
+            "name": "South Market",
+            "min_qty": 40,
+            "max_qty": 180,
+            "tax_rate": 0.06,
+        },
+        {
+            "id": "lieu_4",
+            "name": "Commercial Zone",
+            "min_qty": 100,
+            "max_qty": 500,
+            "tax_rate": 0.03,
+        },
+        {
+            "id": "lieu_5",
+            "name": "Free Port",
+            "min_qty": 200,
+            "max_qty": 1000,
+            "tax_rate": 0.02,
+        },
     ]
 
 
 def get_tool_options() -> List[Dict[str, Any]]:
     return [
-        {"id": "outil_1", "name": "Transport Truck", "cost": 5000,  "capacity": 100},
-        {"id": "outil_2", "name": "Warehouse",       "cost": 10000, "capacity": 500},
-        {"id": "outil_3", "name": "Transport Boat",  "cost": 15000, "capacity": 1000},
-        {"id": "outil_4", "name": "Cargo Plane",     "cost": 50000, "capacity": 5000},
-        {"id": "outil_5", "name": "Van",             "cost": 2000,  "capacity": 50},
+        {"id": "outil_1", "name": "Transport Truck", "cost": 5000, "capacity": 100},
+        {"id": "outil_2", "name": "Warehouse", "cost": 10000, "capacity": 500},
+        {"id": "outil_3", "name": "Transport Boat", "cost": 15000, "capacity": 1000},
+        {"id": "outil_4", "name": "Cargo Plane", "cost": 50000, "capacity": 5000},
+        {"id": "outil_5", "name": "Van", "cost": 2000, "capacity": 50},
     ]
 
 
 def get_card_options() -> List[Dict[str, Any]]:
     return [
-        {"id": "carte_1", "name": "Gold Card",    "description": "Sales boost",       "value": 100, "price": 5000},
-        {"id": "carte_2", "name": "Silver Card",  "description": "Tax reduction",     "value": 50,  "price": 2500},
-        {"id": "carte_3", "name": "Bronze Card",  "description": "Starting bonus",    "value": 25,  "price": 1000},
-        {"id": "carte_4", "name": "Diamond Card", "description": "VIP market access", "value": 200, "price": 10000},
-        {"id": "carte_5", "name": "Emerald Card", "description": "Double production", "value": 150, "price": 7500},
+        {
+            "id": "carte_1",
+            "name": "Gold Card",
+            "description": "Sales boost",
+            "value": 100,
+            "price": 5000,
+        },
+        {
+            "id": "carte_2",
+            "name": "Silver Card",
+            "description": "Tax reduction",
+            "value": 50,
+            "price": 2500,
+        },
+        {
+            "id": "carte_3",
+            "name": "Bronze Card",
+            "description": "Starting bonus",
+            "value": 25,
+            "price": 1000,
+        },
+        {
+            "id": "carte_4",
+            "name": "Diamond Card",
+            "description": "VIP market access",
+            "value": 200,
+            "price": 10000,
+        },
+        {
+            "id": "carte_5",
+            "name": "Emerald Card",
+            "description": "Double production",
+            "value": 150,
+            "price": 7500,
+        },
     ]
 
 
@@ -136,10 +198,10 @@ def get_product_dish_options() -> List[Dict[str, Any]]:
 
 def get_penalty_options() -> List[Dict[str, Any]]:
     return [
-        {"id": "sanction_1", "name": "Warning",         "amount": 0},
-        {"id": "sanction_2", "name": "Light Fine",      "amount": 1000},
-        {"id": "sanction_3", "name": "Medium Fine",     "amount": 5000},
-        {"id": "sanction_4", "name": "Heavy Fine",      "amount": 20000},
+        {"id": "sanction_1", "name": "Warning", "amount": 0},
+        {"id": "sanction_2", "name": "Light Fine", "amount": 1000},
+        {"id": "sanction_3", "name": "Medium Fine", "amount": 5000},
+        {"id": "sanction_4", "name": "Heavy Fine", "amount": 20000},
         {"id": "sanction_5", "name": "Temp Suspension", "amount": 50000},
     ]
 
@@ -148,7 +210,19 @@ def get_constraint_options() -> List[Dict[str, Any]]:
     """Get constraint options."""
     return [
         {"id": "constraint_1", "name": "None", "description": "No constraint"},
-        {"id": "constraint_2", "name": "Minimum 50 units", "description": "Minimum quantity required"},
-        {"id": "constraint_3", "name": "Maximum 200 units", "description": "Maximum quantity allowed"},
-        {"id": "constraint_4", "name": "Reserved for professionals", "description": "Only entrepreneurs can sell"},
+        {
+            "id": "constraint_2",
+            "name": "Minimum 50 units",
+            "description": "Minimum quantity required",
+        },
+        {
+            "id": "constraint_3",
+            "name": "Maximum 200 units",
+            "description": "Maximum quantity allowed",
+        },
+        {
+            "id": "constraint_4",
+            "name": "Reserved for professionals",
+            "description": "Only entrepreneurs can sell",
+        },
     ]

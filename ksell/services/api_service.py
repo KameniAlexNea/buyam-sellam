@@ -12,10 +12,6 @@ from typing import Any, Dict, List, Optional, Tuple
 from ksell.pojo.user import User
 from ksell.utils.constants import (
     BASE_URL,
-    COUNTRIES_URL,
-    LOGIN_ENDPOINT,
-    SIGNUP_ENDPOINT,
-    VERIFICATION_ENDPOINT,
 )
 from ksell.utils.helpers import generate_token, get_country_list
 
@@ -52,9 +48,21 @@ class ApiService:
             user_data = self._users_db[pseudo]
             if user_data.get("password") == password:
                 if not user_data.get("is_verified", False):
-                    return False, "Account not verified. Please verify your email first.", None
-                user = User(**{k: v for k, v in user_data.items() if k in User.__dataclass_fields__})
-                self._token = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
+                    return (
+                        False,
+                        "Account not verified. Please verify your email first.",
+                        None,
+                    )
+                user = User(
+                    **{
+                        k: v
+                        for k, v in user_data.items()
+                        if k in User.__dataclass_fields__
+                    }
+                )
+                self._token = "".join(
+                    random.choices(string.ascii_letters + string.digits, k=32)
+                )
                 return True, "Login successful!", user
             else:
                 return False, "Invalid password.", None
@@ -68,7 +76,9 @@ class ApiService:
             )
             self._users_db[pseudo] = asdict(user)
             self._users_db[pseudo]["password"] = password
-            self._token = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
+            self._token = "".join(
+                random.choices(string.ascii_letters + string.digits, k=32)
+            )
             return True, "Login successful! (Demo account created)", user
 
     def register(self, data: Dict[str, Any]) -> Tuple[bool, str]:
@@ -120,7 +130,10 @@ class ApiService:
         self._users_db[pseudo] = asdict(user)
         self._users_db[pseudo]["password"] = password
 
-        return True, f"Registration successful! Verification code sent to {mail}: {token}"
+        return (
+            True,
+            f"Registration successful! Verification code sent to {mail}: {token}",
+        )
 
     def verify(self, token: str) -> Tuple[bool, str]:
         """Simulate email verification.
@@ -139,14 +152,23 @@ class ApiService:
                     if user_data.get("email") == email:
                         user_data["is_verified"] = True
                         del self._verification_tokens[email]
-                        return True, f"Account verified successfully! You can now log in as '{pseudo}'."
+                        return (
+                            True,
+                            f"Account verified successfully! You can now log in as '{pseudo}'.",
+                        )
                 return False, "Verification failed. Token not found."
 
         return False, "Invalid verification code. Please try again."
 
     def get_user(self, pseudo: str) -> Optional[User]:
         if pseudo in self._users_db:
-            return User(**{k: v for k, v in self._users_db[pseudo].items() if k in User.__dataclass_fields__})
+            return User(
+                **{
+                    k: v
+                    for k, v in self._users_db[pseudo].items()
+                    if k in User.__dataclass_fields__
+                }
+            )
         return None
 
     def update_user(self, user: User) -> bool:
@@ -156,4 +178,7 @@ class ApiService:
         return False
 
     def get_all_users(self) -> List[User]:
-        return [User(**{k: v for k, v in data.items() if k in User.__dataclass_fields__}) for data in self._users_db.values()]
+        return [
+            User(**{k: v for k, v in data.items() if k in User.__dataclass_fields__})
+            for data in self._users_db.values()
+        ]

@@ -20,7 +20,7 @@ from ksell.views.game_page import create_game_page
 from ksell.views.help_page import create_help_page
 from ksell.views.login_page import create_login_page
 from ksell.views.market_page import create_market_page
-from ksell.views.profile_page import create_profile_page
+from ksell.views.profil_page import create_profil_page
 
 
 def main():
@@ -66,7 +66,6 @@ def main():
         }
         """,
     ) as app:
-
         # Application header
         gr.Markdown(
             """
@@ -107,7 +106,7 @@ def main():
 
             # Tab 4: Profile
             with gr.TabItem("👤 Profile"):
-                view_btn, update_btn = create_profile_page(game_service, user_service)
+                view_btn, update_btn = create_profil_page(game_service, user_service)
 
             # Tab 5: Help / Documentation
             with gr.TabItem("📖 Help"):

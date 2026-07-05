@@ -12,7 +12,7 @@ class User:
     id: Optional[str] = None
     username: str = ""
     email: str = ""
-    profile: str = ""
+    profil: str = ""
     country: str = ""
     birth_date: Optional[str] = None
     gender: str = ""

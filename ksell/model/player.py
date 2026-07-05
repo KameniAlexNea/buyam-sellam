@@ -1,10 +1,8 @@
 """Player model for KSell Entreprise."""
 
-from dataclasses import asdict
 from typing import Any, List, Optional
 
 from ksell.pojo.card import Card
-from ksell.pojo.market import Market
 from ksell.pojo.tool import Tool
 from ksell.pojo.user import User
 
