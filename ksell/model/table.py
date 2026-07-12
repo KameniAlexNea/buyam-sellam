@@ -530,6 +530,36 @@ class Table:
             "buyer_balance": buyer.balance,
         }
 
+    def pay_sell_entry_fee(
+        self, seller: Player, market: MarketBoard
+    ) -> Dict[str, Any]:
+        """Pay the fixed entry fee to sell in this market.
+
+        The fee is based on market potential (size), independent of tax rate,
+        market price, or quantity sold. Deducted regardless of sell outcome.
+
+        Args:
+            seller: The player entering the market to sell.
+            market: The target market.
+
+        Returns:
+            Dict with fee details and success status.
+        """
+        fee = market.sell_entry_fee
+        if seller.balance < fee:
+            return {
+                "success": False,
+                "error": f"Insufficient balance to pay entry fee ({fee} FCFA).",
+                "fee": fee,
+                "seller_balance": seller.balance,
+            }
+        seller.balance -= fee
+        return {
+            "success": True,
+            "fee": fee,
+            "seller_balance": seller.balance,
+        }
+
     def process_market_action_sell(
         self, seller: Player, market: MarketBoard, dice_total: int
     ) -> Dict[str, Any]:

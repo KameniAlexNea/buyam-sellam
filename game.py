@@ -277,6 +277,16 @@ for round_number in range(1, table.total_rounds + 1):
                     )
 
             elif strategy == "sell":
+                # Pay fixed entry fee before rolling
+                entry_fee_result = table.pay_sell_entry_fee(player, market)
+                if not entry_fee_result["success"]:
+                    print(f"      ✗ {entry_fee_result['error']}")
+                    continue
+                print(
+                    f"      💰 Entry fee: {entry_fee_result['fee']} FCFA "
+                    f"(balance: {entry_fee_result['seller_balance']:.2f} FCFA)"
+                )
+
                 result = table.process_market_action_sell(player, market, dice_total)
 
                 if not result["success"]:

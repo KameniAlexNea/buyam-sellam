@@ -26,6 +26,8 @@ DICE_BASE = (
     100  # FCFA per dice point  (dice range 2-12 → price range 200-1200 FCFA/unit)
 )
 
+ENTRY_FEE_DIVISOR = 10  # entry fee = floor(total_qty / 10) * 10
+
 
 class MarketBoard:
     """A market location with a fixed product price and an order book."""
@@ -49,6 +51,15 @@ class MarketBoard:
 
         self._init_round()
         self.passing_players: List[str] = []
+
+    @property
+    def sell_entry_fee(self) -> int:
+        """Fixed entry fee for selling in this market, based on market potential (size).
+
+        Independent of tax rate, market price, or quantity sold.
+        Larger markets charge more to enter.
+        """
+        return (self.total_qty // ENTRY_FEE_DIVISOR) * 10
 
     def _init_round(self) -> None:
         self.market_supply: int = random.randint(
