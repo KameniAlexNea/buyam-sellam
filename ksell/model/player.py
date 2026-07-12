@@ -147,20 +147,19 @@ class Player:
     # ---- Inventory management ----
 
     def add_to_inventory(self, product: Product, quantity: int) -> None:
-        """Add product to inventory."""
+        """Add product to inventory. Price from product.price is used as cost basis."""
         for item in self.inventory:
             if item.product.name == product.name:
-                item.quantity += quantity
+                item.add_units(quantity, product.price)
                 return
-        self.inventory.append(ProductModel(product=product, quantity=quantity))
+        self.inventory.append(ProductModel(product=product, quantity=quantity, avg_cost=product.price))
 
     def remove_from_inventory(self, product_name: str, quantity: int) -> bool:
         """Remove product from inventory. Returns True if successful."""
         for item in self.inventory:
             if item.product.name == product_name:
-                if item.quantity < quantity:
+                if not item.remove_units(quantity):
                     return False
-                item.quantity -= quantity
                 if item.quantity == 0:
                     self.inventory.remove(item)
                 return True
@@ -172,6 +171,13 @@ class Player:
             if item.product.name == product_name:
                 return item.quantity
         return 0
+
+    def get_inventory_avg_cost(self, product_name: str) -> float:
+        """Get average cost of a product in inventory."""
+        for item in self.inventory:
+            if item.product.name == product_name:
+                return item.avg_cost
+        return 0.0
 
     def __repr__(self) -> str:
         return f"Player(username={self.username!r}, balance={self.balance})"
