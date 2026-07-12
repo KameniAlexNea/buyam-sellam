@@ -13,6 +13,7 @@ from typing import Any, Dict, List
 
 from fastapi import APIRouter, HTTPException
 
+from ksell.model.difficulty import Difficulty, DifficultyConfig
 from ksell.model.market_board import MarketBoard, DICE_BASE
 from ksell.model.player import Player
 from ksell.model.product import ProductModel
@@ -100,6 +101,7 @@ def _game_state(game_id: str) -> GameStateResponse:
         phase=GamePhase(meta["phase"]),
         round_number=meta.get("round_number", table.current_round),
         total_rounds=table.total_rounds,
+        difficulty=meta.get("difficulty", "medium"),
         players=[_player_info(p) for p in table.players],
         markets=[_market_info(i, m) for i, m in enumerate(markets, 1)],
         turn_order=meta.get("turn_order"),
@@ -125,6 +127,7 @@ def _flush(game_id: str) -> None:
         "phase": meta["phase"],
         "round_number": meta.get("round_number", table.current_round),
         "total_rounds": table.total_rounds,
+        "difficulty": meta.get("difficulty", "medium"),
         "players": [_player_info(p).model_dump() for p in table.players],
         "markets": [
             _market_info(i, m).model_dump()
@@ -168,12 +171,19 @@ def create_game(req: CreateGameRequest):
     game_id = new_game_id()
     create_game_dir(game_id)
 
-    _tables[game_id] = Table(total_rounds=req.total_rounds)
+    # Resolve difficulty config
+    difficulty = DifficultyConfig.from_difficulty(Difficulty(req.difficulty.value))
+
+    _tables[game_id] = Table(
+        total_rounds=req.total_rounds,
+        difficulty=difficulty,
+    )
     _meta[game_id] = {
         "phase": GamePhase.CREATED.value,
         "round_number": 0,
         "total_rounds": req.total_rounds,
         "starting_balance": req.starting_balance,
+        "difficulty": req.difficulty.value,
         "strategies_submitted": [],
         "player_strategies": {},
         "turn_order": [],
@@ -182,7 +192,15 @@ def create_game(req: CreateGameRequest):
         "action_index": 0,
         "message": "Game created. Add players with POST /games/{id}/players",
     }
-    append_history(game_id, "game_created", {"total_rounds": req.total_rounds})
+    append_history(
+        game_id,
+        "game_created",
+        {
+            "total_rounds": req.total_rounds,
+            "difficulty": req.difficulty.value,
+            "starting_balance": req.starting_balance,
+        },
+    )
     return _game_state(game_id)
 
 
@@ -251,7 +269,7 @@ def start_game(game_id: str):
         raise HTTPException(status_code=400, detail="Need at least 2 players to start")
 
     table.generate_markets()
-    table.initialize_player_inventory(units_per_player=20)
+    table.initialize_player_inventory()
 
     # Start round 1
     _start_new_round(game_id)
@@ -273,7 +291,12 @@ def _start_new_round(game_id: str):
     table = _tables[game_id]
     meta = _meta[game_id]
 
-    num_markets = uniform_int_range(1, min(3, len(table.markets)))
+    # Use difficulty config for number of markets, or fall back to default
+    if table.difficulty is not None:
+        num_markets = table.difficulty.sample_num_markets_per_round(len(table.markets))
+    else:
+        num_markets = uniform_int_range(1, min(3, len(table.markets)))
+
     markets = table.start_round(num_markets)
 
     meta["phase"] = GamePhase.STRATEGY.value

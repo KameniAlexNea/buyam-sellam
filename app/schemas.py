@@ -7,6 +7,9 @@ from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 
+from ksell.model.difficulty import Difficulty
+
+
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
@@ -37,6 +40,10 @@ class Action(str, Enum):
 class CreateGameRequest(BaseModel):
     starting_balance: float = Field(50000, ge=0)
     total_rounds: int = Field(5, ge=1, le=100)
+    difficulty: Difficulty = Field(
+        Difficulty.MEDIUM,
+        description="Game difficulty level (affects markets, taxes, player resources)",
+    )
 
 
 class AddPlayerRequest(BaseModel):
@@ -91,6 +98,7 @@ class GameStateResponse(BaseModel):
     phase: GamePhase
     round_number: int
     total_rounds: int
+    difficulty: str = "medium"
     players: list[PlayerInfoResponse] = []
     markets: list[MarketInfoResponse] = []
     turn_order: Optional[list[dict]] = None
