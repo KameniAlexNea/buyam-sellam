@@ -4,7 +4,7 @@ Represents two dice, each rolling 1-6.
 """
 
 import random
-from typing import Any, Dict, Optional
+from typing import Optional
 
 
 class Dice:

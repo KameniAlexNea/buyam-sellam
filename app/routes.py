@@ -9,12 +9,10 @@ The Table object is kept in-memory per game.  After every state transition
 the full state is flushed to out/{game_id}/state.json.
 """
 
-import copy
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from fastapi import APIRouter, HTTPException
 
-from ksell.model.dice import Dice
 from ksell.model.market_board import MarketBoard, DICE_BASE
 from ksell.model.player import Player
 from ksell.model.product import ProductModel
@@ -41,7 +39,6 @@ from app.state_manager import (
     create_game_dir,
     delete_game,
     list_games,
-    load_state,
     new_game_id,
     save_state,
 )
@@ -222,7 +219,9 @@ def add_player(game_id: str, req: AddPlayerRequest):
     table = _tables[game_id]
 
     if any(p.username == req.username for p in table.players):
-        raise HTTPException(status_code=400, detail=f"Player '{req.username}' already exists")
+        raise HTTPException(
+            status_code=400, detail=f"Player '{req.username}' already exists"
+        )
 
     user = User(username=req.username)
     player = Player(user=user)
@@ -258,7 +257,9 @@ def start_game(game_id: str):
     _start_new_round(game_id)
 
     _flush(game_id)
-    append_history(game_id, "game_started", {"players": [p.username for p in table.players]})
+    append_history(
+        game_id, "game_started", {"players": [p.username for p in table.players]}
+    )
     return _game_state(game_id)
 
 
@@ -280,7 +281,9 @@ def _start_new_round(game_id: str):
     meta["active_markets"] = markets
     meta["strategies_submitted"] = []
     meta["player_strategies"] = {}
-    meta["message"] = f"Round {table.current_round} started. {num_markets} markets active. Submit strategies."
+    meta["message"] = (
+        f"Round {table.current_round} started. {num_markets} markets active. Submit strategies."
+    )
 
     _flush(game_id)
 
@@ -294,7 +297,9 @@ def submit_strategy(game_id: str, req: SubmitStrategyRequest):
 
     player = table.get_player(req.username)
     if not player:
-        raise HTTPException(status_code=404, detail=f"Player '{req.username}' not found")
+        raise HTTPException(
+            status_code=404, detail=f"Player '{req.username}' not found"
+        )
 
     # Parse & validate strategy
     parsed: List[tuple] = []
@@ -302,7 +307,10 @@ def submit_strategy(game_id: str, req: SubmitStrategyRequest):
         mi = entry["market_index"]
         action = entry["action"]
         if not (1 <= mi <= len(markets)):
-            raise HTTPException(status_code=400, detail=f"Market index {mi} out of range (1-{len(markets)})")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Market index {mi} out of range (1-{len(markets)})",
+            )
         if action not in {Action.BUY.value, Action.SELL.value, Action.SKIP.value}:
             raise HTTPException(status_code=400, detail=f"Invalid action '{action}'")
         # Validate sell: player must have the product
@@ -329,14 +337,26 @@ def submit_strategy(game_id: str, req: SubmitStrategyRequest):
         meta["action_index"] = 0
         meta["current_player"] = turn_order[0][0].username
         meta["current_market_index"] = None
-        meta["message"] = f"All strategies submitted. Turn order: {', '.join(t['username'] for t in meta['turn_order'])}"
+        meta["message"] = (
+            f"All strategies submitted. Turn order: {', '.join(t['username'] for t in meta['turn_order'])}"
+        )
         _execute_next_action(game_id)
     else:
-        remaining = [p.username for p in table.players if p.username not in meta["strategies_submitted"]]
-        meta["message"] = f"Strategy for '{req.username}' recorded. Waiting for: {', '.join(remaining)}"
+        remaining = [
+            p.username
+            for p in table.players
+            if p.username not in meta["strategies_submitted"]
+        ]
+        meta["message"] = (
+            f"Strategy for '{req.username}' recorded. Waiting for: {', '.join(remaining)}"
+        )
 
     _flush(game_id)
-    append_history(game_id, "strategy_submitted", {"username": req.username, "strategy": [[m, a] for m, a in parsed]})
+    append_history(
+        game_id,
+        "strategy_submitted",
+        {"username": req.username, "strategy": [[m, a] for m, a in parsed]},
+    )
     return _game_state(game_id)
 
 
@@ -350,7 +370,9 @@ def _execute_next_action(game_id: str):
     table = _tables[game_id]
     meta = _meta[game_id]
     markets = meta["active_markets"]
-    turn_order_list = [(table.get_player(t["username"]), t["dice_total"]) for t in meta["turn_order"]]
+    turn_order_list = [
+        (table.get_player(t["username"]), t["dice_total"]) for t in meta["turn_order"]
+    ]
 
     while meta["action_index"] < len(turn_order_list):
         player, initial_dice = turn_order_list[meta["action_index"]]
@@ -394,7 +416,9 @@ def _execute_next_action(game_id: str):
             result = table.process_market_action_buy(player, market, dice_total)
             if not result.get("can_buy"):
                 meta["can_buy"] = False
-                meta["message"] = f"{player.username}: Buy condition not met (dice {dice_price} < market {market.market_fixed_price}). Skipping."
+                meta["message"] = (
+                    f"{player.username}: Buy condition not met (dice {dice_price} < market {market.market_fixed_price}). Skipping."
+                )
                 player_actions_done.setdefault(player.username, 0)
                 player_actions_done[player.username] += 1
                 meta["player_actions_done"] = player_actions_done
@@ -405,7 +429,9 @@ def _execute_next_action(game_id: str):
                 return
             meta["can_buy"] = True
             meta["max_affordable"] = result["max_affordable"]
-            meta["message"] = f"{player.username}: Buy condition met! Dice {dice_price} >= market {market.market_fixed_price}. Max affordable: {result['max_affordable']}. Send POST /action with quantity."
+            meta["message"] = (
+                f"{player.username}: Buy condition met! Dice {dice_price} >= market {market.market_fixed_price}. Max affordable: {result['max_affordable']}. Send POST /action with quantity."
+            )
             return  # Wait for client to send quantity
 
         elif strategy == Action.SELL.value:
@@ -425,7 +451,9 @@ def _execute_next_action(game_id: str):
             result = table.process_market_action_sell(player, market, dice_total)
             if not result.get("can_sell"):
                 meta["can_sell"] = False
-                meta["message"] = f"{player.username}: Sell condition not met (dice {dice_price} > market {market.market_fixed_price}). Skipping."
+                meta["message"] = (
+                    f"{player.username}: Sell condition not met (dice {dice_price} > market {market.market_fixed_price}). Skipping."
+                )
                 player_actions_done.setdefault(player.username, 0)
                 player_actions_done[player.username] += 1
                 meta["player_actions_done"] = player_actions_done
@@ -436,14 +464,18 @@ def _execute_next_action(game_id: str):
                 return
             meta["can_sell"] = True
             meta["seller_qty"] = result["seller_qty"]
-            meta["message"] = f"{player.username}: Sell condition met! Dice {dice_price} <= market {market.market_fixed_price}. You have {result['seller_qty']} units. Send POST /action with quantity."
+            meta["message"] = (
+                f"{player.username}: Sell condition met! Dice {dice_price} <= market {market.market_fixed_price}. You have {result['seller_qty']} units. Send POST /action with quantity."
+            )
             return  # Wait for client to send quantity
 
     # All actions done → end round
     _end_current_round(game_id)
 
 
-@router.post("/{game_id}/action", summary="Execute the current action (buy/sell with quantity)")
+@router.post(
+    "/{game_id}/action", summary="Execute the current action (buy/sell with quantity)"
+)
 def execute_action(game_id: str, req: ExecuteActionRequest):
     _check_phase(game_id, GamePhase.ACTION)
     table = _tables[game_id]
@@ -472,14 +504,20 @@ def execute_action(game_id: str, req: ExecuteActionRequest):
     if strategy == Action.BUY.value:
         max_aff = meta["max_affordable"]
         if req.quantity > max_aff:
-            raise HTTPException(status_code=400, detail=f"Quantity {req.quantity} exceeds max affordable ({max_aff})")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Quantity {req.quantity} exceeds max affordable ({max_aff})",
+            )
         result = table.execute_buy_at_market_price(player, market, req.quantity)
         action_label = "buy"
 
     elif strategy == Action.SELL.value:
         max_sell = meta["seller_qty"]
         if req.quantity > max_sell:
-            raise HTTPException(status_code=400, detail=f"Quantity {req.quantity} exceeds inventory ({max_sell})")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Quantity {req.quantity} exceeds inventory ({max_sell})",
+            )
         result = table.execute_market_auto_buy(player, market, req.quantity, dice_price)
         action_label = "sell"
 
@@ -491,14 +529,25 @@ def execute_action(game_id: str, req: ExecuteActionRequest):
     player_actions_done[player.username] += 1
     meta["player_actions_done"] = player_actions_done
 
-    turn_order_list = [(table.get_player(t["username"]), t["dice_total"]) for t in meta["turn_order"]]
+    turn_order_list = [
+        (table.get_player(t["username"]), t["dice_total"]) for t in meta["turn_order"]
+    ]
     meta["action_index"] += 1
     if meta["action_index"] < len(turn_order_list):
         next_p, _ = turn_order_list[meta["action_index"]]
         meta["current_player"] = next_p.username
 
     _flush(game_id)
-    append_history(game_id, action_label, {"player": player.username, "market": market_num, "quantity": req.quantity, "result": result})
+    append_history(
+        game_id,
+        action_label,
+        {
+            "player": player.username,
+            "market": market_num,
+            "quantity": req.quantity,
+            "result": result,
+        },
+    )
 
     # Check if all actions are done
     all_done = meta["action_index"] >= len(turn_order_list)
@@ -535,7 +584,9 @@ def _end_current_round(game_id: str):
 
     if table.current_round >= table.total_rounds:
         meta["phase"] = GamePhase.GAME_OVER.value
-        meta["message"] = "Game over! Check GET /games/{id}/results for final standings."
+        meta["message"] = (
+            "Game over! Check GET /games/{id}/results for final standings."
+        )
     else:
         _start_new_round(game_id)
 
@@ -548,7 +599,9 @@ def _end_current_round(game_id: str):
     meta["seller_qty"] = None
 
     _flush(game_id)
-    append_history(game_id, "round_ended", {"round": table.current_round, "purchases": purchases})
+    append_history(
+        game_id, "round_ended", {"round": table.current_round, "purchases": purchases}
+    )
 
 
 # ---------------------------------------------------------------------------

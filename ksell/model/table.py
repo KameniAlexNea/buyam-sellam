@@ -164,7 +164,11 @@ class Table:
 
         return {
             "round": self.current_round,
-            "dice": {"die1": self.dice.die1, "die2": self.dice.die2, "total": self.dice.total},
+            "dice": {
+                "die1": self.dice.die1,
+                "die2": self.dice.die2,
+                "total": self.dice.total,
+            },
             "markets": [
                 {
                     "product": m.product,
@@ -538,9 +542,7 @@ class Table:
             "buyer_balance": buyer.balance,
         }
 
-    def pay_sell_entry_fee(
-        self, seller: Player, market: MarketBoard
-    ) -> Dict[str, Any]:
+    def pay_sell_entry_fee(self, seller: Player, market: MarketBoard) -> Dict[str, Any]:
         """Pay the fixed entry fee to sell in this market.
 
         The fee is based on market potential (size), independent of tax rate,

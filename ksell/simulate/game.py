@@ -30,7 +30,9 @@ users = []
 for i in range(n_players):
     users.append(User(username=f"Player_{i + 1}"))
 
-starting_balance = float(input("Enter starting balance for each player: ").strip() or "5000")
+starting_balance = float(
+    input("Enter starting balance for each player: ").strip() or "5000"
+)
 players = [Player(user=u) for u in users]
 for p in players:
     p.balance = starting_balance

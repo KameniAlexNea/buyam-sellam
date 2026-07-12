@@ -6,13 +6,11 @@ Each game gets a folder under out/{game_id}/ with:
 """
 
 import json
-import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from pydantic import TypeAdapter
 
 # Root directory for game state files.
 OUT_DIR = Path(__file__).resolve().parent.parent / "out"
@@ -82,7 +80,9 @@ def load_state(game_id: str) -> Optional[Dict[str, Any]]:
     return json.loads(path.read_text())
 
 
-def append_history(game_id: str, action: str, details: Optional[Dict[str, Any]] = None) -> None:
+def append_history(
+    game_id: str, action: str, details: Optional[Dict[str, Any]] = None
+) -> None:
     """Append an entry to the game's history log."""
     path = _history_path(game_id)
     path.parent.mkdir(parents=True, exist_ok=True)

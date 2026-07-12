@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class GamePhase(str, Enum):
     CREATED = "created"
     SETUP = "setup"
@@ -32,6 +33,7 @@ class Action(str, Enum):
 # Request schemas
 # ---------------------------------------------------------------------------
 
+
 class CreateGameRequest(BaseModel):
     starting_balance: float = Field(50000, ge=0)
     total_rounds: int = Field(5, ge=1, le=100)
@@ -48,7 +50,17 @@ class SubmitStrategyRequest(BaseModel):
         description="List of {market_index: int, action: 'buy'|'sell'|'skip'}",
     )
 
-    model_config = {"json_schema_extra": {"example": {"username": "alice", "strategy": [{"market_index": 1, "action": "buy"}, {"market_index": 2, "action": "skip"}]}}}
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "username": "alice",
+                "strategy": [
+                    {"market_index": 1, "action": "buy"},
+                    {"market_index": 2, "action": "skip"},
+                ],
+            }
+        }
+    }
 
 
 class ExecuteActionRequest(BaseModel):
@@ -58,6 +70,7 @@ class ExecuteActionRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # Response schemas
 # ---------------------------------------------------------------------------
+
 
 class PlayerInfoResponse(BaseModel):
     username: str
