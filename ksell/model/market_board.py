@@ -376,7 +376,33 @@ class MarketBoard:
             ],
             "passing_players": self.passing_players,
             "selling_players": self.selling_players,
+            "last_purchase_price": self.last_purchase_price,
+            "pending_market_purchase": self.pending_market_purchase,
+            "completed_trades": self.completed_trades,
+            "dice": self.dice.to_dict(),
         }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "MarketBoard":
+        """Deserialize market board from dictionary."""
+        from ksell.model.dice import Dice
+        from ksell.pojo.market import Market
+
+        location = Market.from_dict(data["location"])
+        dice = Dice.from_dict(data["dice"])
+        mb = cls(location=location, dice=dice)
+        mb.market_fixed_price = data["market_fixed_price"]
+        mb.product = data["product"]
+        mb.market_supply = data["market_supply"]
+        mb.total_qty = data["total_qty"]
+        mb.remaining_qty = data.get("remaining_qty", data["market_supply"])
+        mb.passing_players = data.get("passing_players", [])
+        mb.selling_players = data.get("selling_players", [])
+        mb.last_purchase_price = data.get("last_purchase_price")
+        mb.pending_market_purchase = data.get("pending_market_purchase")
+        mb.sell_orders = data.get("sell_orders", [])
+        mb.completed_trades = data.get("completed_trades", [])
+        return mb
 
     def __repr__(self) -> str:
         return f"MarketBoard({self.location.name!r}, product={self.product!r}, fixed={self.market_fixed_price})"

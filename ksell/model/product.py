@@ -39,10 +39,18 @@ class ProductModel:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            "product": asdict(self.product),
+            "product": self.product.to_dict(),
             "quantity": self.quantity,
             "avg_cost": self.avg_cost,
         }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ProductModel":
+        """Deserialize product model from dictionary."""
+        from ksell.pojo.product import Product
+
+        product = Product.from_dict(data["product"])
+        return cls(product=product, quantity=data["quantity"], avg_cost=data["avg_cost"])
 
     def __repr__(self) -> str:
         return f"ProductModel(name={self.product.name!r}, quantity={self.quantity}, avg_cost={self.avg_cost})"
