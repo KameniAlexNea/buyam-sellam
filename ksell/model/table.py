@@ -605,7 +605,6 @@ class Table:
         net_revenue = revenue - tax_amount
 
         # Execute transaction
-        seller.balance -= tax_amount
         seller.balance += net_revenue
         seller.remove_from_inventory(product_name, quantity)
 
