@@ -415,7 +415,7 @@ def _execute_next_action(game_id: str):
         if strategy == Action.BUY.value:
             result = table.process_market_action_buy(player, market, dice_total)
             if not result.get("can_buy"):
-                meta["can_buy"] = False
+                meta["can_buy"] = None
                 meta["message"] = (
                     f"{player.username}: Buy condition not met (dice {dice_price} < market {market.market_fixed_price}). Skipping."
                 )
@@ -426,7 +426,7 @@ def _execute_next_action(game_id: str):
                 if meta["action_index"] < len(turn_order_list):
                     next_p, _ = turn_order_list[meta["action_index"]]
                     meta["current_player"] = next_p.username
-                return
+                continue
             meta["can_buy"] = True
             meta["max_affordable"] = result["max_affordable"]
             meta["message"] = (
@@ -450,7 +450,7 @@ def _execute_next_action(game_id: str):
 
             result = table.process_market_action_sell(player, market, dice_total)
             if not result.get("can_sell"):
-                meta["can_sell"] = False
+                meta["can_sell"] = None
                 meta["message"] = (
                     f"{player.username}: Sell condition not met (dice {dice_price} > market {market.market_fixed_price}). Skipping."
                 )
@@ -461,7 +461,7 @@ def _execute_next_action(game_id: str):
                 if meta["action_index"] < len(turn_order_list):
                     next_p, _ = turn_order_list[meta["action_index"]]
                     meta["current_player"] = next_p.username
-                return
+                continue
             meta["can_sell"] = True
             meta["seller_qty"] = result["seller_qty"]
             meta["message"] = (
