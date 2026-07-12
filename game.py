@@ -228,7 +228,7 @@ for round_number in range(1, table.total_rounds + 1):
                     continue
 
                 print(
-                    f"      ✓ Buy condition met! (dice {dice_price} > market {result['market_price']})"
+                    f"      ✓ Buy condition met! (dice {dice_price} >= market {result['market_price']})"
                 )
                 print(
                     f"      Buying at market price: {result['market_price']} FCFA/unit"
@@ -288,7 +288,7 @@ for round_number in range(1, table.total_rounds + 1):
                     continue
 
                 print(
-                    f"      ✓ Sell condition met! (dice {dice_price} < market {result['market_price']})"
+                    f"      ✓ Sell condition met! (dice {dice_price} <= market {result['market_price']})"
                 )
                 print(
                     f"      Market will auto-buy at dice price: {dice_price} FCFA/unit"
