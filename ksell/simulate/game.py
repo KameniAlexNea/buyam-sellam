@@ -6,6 +6,7 @@ Use this to test the full game flow without manual interaction.
 
 import random
 
+from ksell.model.difficulty import Difficulty, DifficultyConfig
 from ksell.model.player import Player
 from ksell.model.table import Table
 from ksell.utils.random_utils import uniform_int_range
@@ -30,20 +31,30 @@ users = []
 for i in range(n_players):
     users.append(User(username=f"Player_{i + 1}"))
 
-starting_balance = float(
-    input("Enter starting balance for each player: ").strip() or "5000"
-)
+# Difficulty selection
+print("\nDifficulty levels:")
+print("  1. Easy   — Generous resources, low taxes, fewer competitors")
+print("  2. Medium — Balanced challenge (default)")
+print("  3. Hard   — Tight budget, high taxes, more competition")
+diff_choice = input("Select difficulty (1/2/3): ").strip() or "2"
+DIFF_MAP = {"1": Difficulty.EASY, "2": Difficulty.MEDIUM, "3": Difficulty.HARD}
+difficulty = DIFF_MAP.get(diff_choice, Difficulty.MEDIUM)
+diff_config = DifficultyConfig.from_difficulty(difficulty)
+print(f"\nDifficulty: {diff_config.name} — {diff_config.description}")
+print(f"  Starting balance: {diff_config.starting_balance:,.0f} FCFA")
+print(f"  Starting inventory: {diff_config.units_per_player} units per player")
+
 players = [Player(user=u) for u in users]
 for p in players:
-    p.balance = starting_balance
+    p.balance = diff_config.starting_balance
 
 n_rounds = int(input("Enter number of rounds for the game: ").strip() or "5")
 
-table = Table(players=players, total_rounds=n_rounds)
+table = Table(players=players, total_rounds=n_rounds, difficulty=diff_config)
 table.generate_markets()
 
 print("\nInitializing starting inventory for each player...")
-for username, inv_str in table.initialize_player_inventory(units_per_player=20).items():
+for username, inv_str in table.initialize_player_inventory().items():
     print(f"  {username}: {inv_str}")
 
 STRATEGY_MAP = {"b": "buy", "s": "sell", "k": "skip"}
@@ -70,7 +81,7 @@ for round_number in range(1, table.total_rounds + 1):
     print(f"--- Round {round_number} ---")
     print(f"{'=' * 60}")
 
-    num_markets = uniform_int_range(1, min(3, len(table.markets)))
+    num_markets = diff_config.sample_num_markets_per_round(len(table.markets))
     markets = table.start_round(num_markets)
 
     print("\nAvailable Markets this round:")

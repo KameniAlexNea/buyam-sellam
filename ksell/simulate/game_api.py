@@ -84,16 +84,28 @@ Configure players and start the game!
         print("At least 2 players are required to start the game.")
         sys.exit(1)
 
-    starting_balance = float(
-        input("Enter starting balance for each player: ").strip() or "50000"
-    )
+    # Difficulty selection
+    print("\nDifficulty levels:")
+    print("  1. Easy   — Generous resources, low taxes, fewer competitors")
+    print("  2. Medium — Balanced challenge (default)")
+    print("  3. Hard   — Tight budget, high taxes, more competition")
+    diff_choice = input("Select difficulty (1/2/3): ").strip() or "2"
+    DIFF_MAP = {"1": "easy", "2": "medium", "3": "hard"}
+    difficulty = DIFF_MAP.get(diff_choice, "medium")
+
     n_rounds = int(input("Enter number of rounds for the game: ").strip() or "5")
 
     # ---- Create game ----
-    print(f"\nCreating game with {n_players} players, {n_rounds} rounds...")
-    state = _post("", {"starting_balance": starting_balance, "total_rounds": n_rounds})
+    print(f"\nCreating game with {n_players} players, {n_rounds} rounds (difficulty: {difficulty})...")
+    state = _post(
+        "",
+        {
+            "total_rounds": n_rounds,
+            "difficulty": difficulty,
+        },
+    )
     game_id = state["game_id"]
-    print(f"Game ID: {game_id}")
+    print(f"Game ID: {game_id} | Difficulty: {state.get('difficulty', difficulty)}")
 
     # ---- Add players ----
     usernames = []
@@ -136,9 +148,7 @@ Configure players and start the game!
 
         for username in usernames:
             strategy = _random_strategy(markets, state["players"], username)
-            parsed = [
-                {"market_index": mi, "action": action} for mi, action in strategy
-            ]
+            parsed = [{"market_index": mi, "action": action} for mi, action in strategy]
 
             # Submit — this may trigger action phase if last player
             state = _post(
