@@ -19,7 +19,7 @@ class Table:
     def __init__(self, players: Optional[List[Player]] = None, total_rounds: int = 10):
         self.players: List[Player] = players if players is not None else []
         self.markets: List[MarketBoard] = []
-        self.dice: Dice = Dice()
+        self.dice: Dice = Dice.shake()
         self.current_round: int = 0
         self.total_rounds: int = total_rounds
 
@@ -49,7 +49,7 @@ class Table:
         Each product can appear in multiple markets at different prices,
         enabling buy-low-sell-high strategies.
         """
-        self.dice.shake()
+        self.dice = Dice.shake()
         self.markets.clear()
 
         # Available products for the game
@@ -165,7 +165,6 @@ class Table:
             "round": self.current_round,
             "dice": self.dice.to_dict(),
             "markets": [m.to_dict() for m in self.markets],
-            "condition": self.dice.market_condition(),
         }
 
     def get_leaderboard(self) -> List[Dict[str, Any]]:
@@ -298,8 +297,8 @@ class Table:
 
     def roll_dice_for_player(self) -> int:
         """Roll dice and return the total (2-12)."""
-        self.dice.shake()
-        return self.dice.total()
+        self.dice = Dice.shake()
+        return self.dice.total
 
     def determine_forced_decision(
         self, player: Player, markets: List[MarketBoard]

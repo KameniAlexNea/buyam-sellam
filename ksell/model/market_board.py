@@ -36,7 +36,7 @@ class MarketBoard:
         dice: Optional[Dice] = None,
     ):
         self.location = location or Market()
-        self.dice = dice or Dice()
+        self.dice = dice or Dice.shake()
 
         self.market_fixed_price: int = self.location.fixed_price
         self.product: str = self.location.product
@@ -343,7 +343,7 @@ class MarketBoard:
         }
 
     def refresh(self, dice: Optional[Dice] = None) -> None:
-        self.dice = dice or Dice()
+        self.dice = dice or Dice.shake()
         self._init_round()
 
     def to_dict(self) -> Dict[str, Any]:
