@@ -219,3 +219,4 @@ __marimo__/
 
 # Game state files (progressive JSON state written to out/)
 out/
+simulate/
