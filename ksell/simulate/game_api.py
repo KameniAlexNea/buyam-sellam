@@ -229,7 +229,9 @@ def _random_strategy(
 
     actions = ["buy", "sell", "skip"]
     strategy: List[tuple] = []
-    for m in markets:
+    market_list = list(markets)
+    random.shuffle(market_list)
+    for m in market_list:
         product = m["product"]
         # Only allow 'sell' if player owns this product
         allowed = actions if product in owned_products else ["buy", "skip"]

@@ -395,6 +395,10 @@ def _execute_next_action(game_id: str):
         meta["current_player"] = player.username
         meta["current_market_index"] = market_num
 
+        # Clear stale flags from previous action
+        meta["can_buy"] = None
+        meta["can_sell"] = None
+
         if strategy == Action.SKIP.value:
             # Skip — just advance
             player_actions_done.setdefault(player.username, 0)
@@ -528,6 +532,10 @@ def execute_action(game_id: str, req: ExecuteActionRequest):
     player_actions_done.setdefault(player.username, 0)
     player_actions_done[player.username] += 1
     meta["player_actions_done"] = player_actions_done
+
+    # Clear flags so next poll doesn't see stale values
+    meta["can_buy"] = None
+    meta["can_sell"] = None
 
     turn_order_list = [
         (table.get_player(t["username"]), t["dice_total"]) for t in meta["turn_order"]
