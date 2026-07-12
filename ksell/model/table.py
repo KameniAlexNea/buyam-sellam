@@ -353,7 +353,7 @@ class Table:
     ) -> Dict[str, Any]:
         """Process a buy action with new mechanics.
 
-        Buy condition: dice_price > market_price → buy at market price.
+        Buy condition: dice_price >= market_price → buy at market price.
         Quantity: ask player how many (capped by balance, dice ratio, available supply).
 
         Args:
@@ -367,10 +367,10 @@ class Table:
         dice_price = dice_total * DICE_BASE
         market_price = market.market_fixed_price
 
-        if dice_price <= market_price:
+        if dice_price < market_price:
             return {
                 "success": False,
-                "error": f"Your dice price ({dice_price} FCFA) is not greater than market price ({market_price} FCFA). Buy failed.",
+                "error": f"Your dice price ({dice_price} FCFA) is less than market price ({market_price} FCFA). Buy failed.",
                 "dice_price": dice_price,
                 "market_price": market_price,
             }
@@ -552,7 +552,7 @@ class Table:
         if dice_price > market_price:
             return {
                 "success": False,
-                "error": f"Your dice price ({dice_price} FCFA) is great than market price ({market_price} FCFA). Sell failed.",
+                "error": f"Your dice price ({dice_price} FCFA) is greater than market price ({market_price} FCFA). Sell failed.",
                 "dice_price": dice_price,
                 "market_price": market_price,
             }
