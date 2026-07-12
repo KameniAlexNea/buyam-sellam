@@ -16,7 +16,6 @@ BUY: player buys at dice_price.
 """
 
 import random
-from dataclasses import asdict
 from typing import Any, Dict, List, Optional
 
 from ksell.model.dice import Dice
@@ -356,27 +355,6 @@ class MarketBoard:
     def refresh(self, dice: Optional[Dice] = None) -> None:
         self.dice = dice or Dice.shake()
         self._init_round()
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "product": self.product,
-            "market_fixed_price": self.market_fixed_price,
-            "market_supply": self.market_supply,
-            "total_qty": self.total_qty,
-            "remaining_qty": self.market_supply,
-            "location": asdict(self.location),
-            "sell_orders": [
-                {
-                    "username": o["username"],
-                    "quantity": o["quantity"],
-                    "remaining": o["remaining"],
-                    "price": o["price"],
-                }
-                for o in self.sell_orders
-            ],
-            "passing_players": self.passing_players,
-            "selling_players": self.selling_players,
-        }
 
     def __repr__(self) -> str:
         return f"MarketBoard({self.location.name!r}, product={self.product!r}, fixed={self.market_fixed_price})"

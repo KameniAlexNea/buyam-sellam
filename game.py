@@ -11,7 +11,6 @@ New game mechanics:
 - Sell: dice_price < market_price → market auto-buys at dice price
 """
 
-
 from ksell.model.player import Player
 from ksell.model.table import Table
 from ksell.utils.random_utils import uniform_int_range
