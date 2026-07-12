@@ -26,7 +26,9 @@ class ProductModel:
         """Add units and update average cost (weighted average)."""
         total_cost = self.avg_cost * self.quantity + price_per_unit * quantity
         self.quantity += quantity
-        self.avg_cost = round(total_cost / self.quantity, 2) if self.quantity > 0 else 0.0
+        self.avg_cost = (
+            round(total_cost / self.quantity, 2) if self.quantity > 0 else 0.0
+        )
 
     def remove_units(self, quantity: int) -> bool:
         """Remove units (avg_cost stays the same — FIFO not tracked)."""

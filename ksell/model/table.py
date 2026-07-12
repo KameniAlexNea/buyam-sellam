@@ -98,7 +98,8 @@ class Table:
                     max_qty=max_qty,
                     tax_rate=round(random.uniform(0.01, 0.10), 2),
                     product=product_name,
-                    fixed_price=(random.randint(1, 6) + random.randint(1, 6)) * 100,  # 200-1200 FCFA
+                    fixed_price=(random.randint(1, 6) + random.randint(1, 6))
+                    * 100,  # 200-1200 FCFA
                 )
                 market_board = MarketBoard(location=market, dice=self.dice)
                 self.markets.append(market_board)
@@ -396,7 +397,9 @@ class Table:
         # Max affordable by balance (buy at market price + tax)
         tax_rate = market.location.tax_rate
         effective_price = market_price * (1 + tax_rate)
-        max_by_balance = int(buyer.balance // effective_price) if effective_price > 0 else 0
+        max_by_balance = (
+            int(buyer.balance // effective_price) if effective_price > 0 else 0
+        )
 
         max_affordable = min(max_by_dice, total_available, max_by_balance)
 
@@ -458,13 +461,15 @@ class Table:
             remaining -= buy_qty
             total_cost += cost
             units_bought += buy_qty
-            trades.append({
-                "buyer": buyer.username,
-                "seller": order["username"],
-                "quantity": buy_qty,
-                "price": order["price"],
-                "total": cost,
-            })
+            trades.append(
+                {
+                    "buyer": buyer.username,
+                    "seller": order["username"],
+                    "quantity": buy_qty,
+                    "price": order["price"],
+                    "total": cost,
+                }
+            )
 
         # Then from market supply
         if remaining > 0 and market.market_supply > 0:
@@ -475,13 +480,15 @@ class Table:
             remaining -= buy_qty
             total_cost += cost
             units_bought += buy_qty
-            trades.append({
-                "buyer": buyer.username,
-                "seller": "market",
-                "quantity": buy_qty,
-                "price": market_price,
-                "total": cost,
-            })
+            trades.append(
+                {
+                    "buyer": buyer.username,
+                    "seller": "market",
+                    "quantity": buy_qty,
+                    "price": market_price,
+                    "total": cost,
+                }
+            )
 
         market.sell_orders = [o for o in market.sell_orders if o["remaining"] > 0]
         market.completed_trades.extend(trades)

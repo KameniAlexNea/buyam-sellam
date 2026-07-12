@@ -39,7 +39,9 @@ class Player:
             if item.product.name == product.name:
                 item.add_units(quantity, product.price)
                 return
-        self.inventory.append(ProductModel(product=product, quantity=quantity, avg_cost=product.price))
+        self.inventory.append(
+            ProductModel(product=product, quantity=quantity, avg_cost=product.price)
+        )
 
     def remove_from_inventory(self, product_name: str, quantity: int) -> bool:
         """Remove product from inventory. Returns True if successful."""
