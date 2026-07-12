@@ -17,6 +17,7 @@ from fastapi import APIRouter, HTTPException
 from ksell.model.dice import Dice
 from ksell.model.market_board import MarketBoard, DICE_BASE
 from ksell.model.player import Player
+from ksell.model.product import ProductModel
 from ksell.model.table import Table
 from ksell.pojo.user import User
 from ksell.utils.random_utils import uniform_int_range
@@ -62,11 +63,23 @@ _meta: Dict[str, Dict[str, Any]] = {}
 router = APIRouter(prefix="/games", tags=["games"])
 
 
+def _product_to_dict(pm: ProductModel) -> Dict[str, Any]:
+    """Serialize a ProductModel to a plain dict."""
+    return {
+        "product": {
+            "name": pm.product.name,
+            "price": pm.product.price,
+        },
+        "quantity": pm.quantity,
+        "avg_cost": pm.avg_cost,
+    }
+
+
 def _player_info(p: Player) -> PlayerInfoResponse:
     return PlayerInfoResponse(
         username=p.username,
         balance=p.balance,
-        inventory=[item.to_dict() for item in p.inventory],
+        inventory=[_product_to_dict(item) for item in p.inventory],
     )
 
 
@@ -560,7 +573,7 @@ def get_results(game_id: str):
                 "username": player.username,
                 "final_balance": player.balance,
                 "profit_loss": round(profit_loss, 2),
-                "inventory": [item.to_dict() for item in player.inventory],
+                "inventory": [_product_to_dict(item) for item in player.inventory],
             }
         )
 

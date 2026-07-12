@@ -27,19 +27,6 @@ class Dice:
         """Return the sum of both dice."""
         return self.die1 + self.die2
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert dice to dictionary."""
-        return {
-            "die1": self.die1,
-            "die2": self.die2,
-            "total": self.total,
-        }
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Dice":
-        """Deserialize dice from dictionary."""
-        return cls(die1=data["die1"], die2=data["die2"])
-
     def __repr__(self) -> str:
         return f"Dice(d1={self.die1}, d2={self.die2}, total={self.total})"
 

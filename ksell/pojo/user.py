@@ -1,8 +1,8 @@
 """User POJO for KSell Entreprise."""
 
 import uuid
-from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass, field
+from typing import List, Optional
 
 
 @dataclass
@@ -30,12 +30,3 @@ class User:
     def __post_init__(self):
         if self.id is None:
             self.id = str(uuid.uuid4())[:8]
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Serialize user to dictionary."""
-        return asdict(self)
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "User":
-        """Deserialize user from dictionary."""
-        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})

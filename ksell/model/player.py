@@ -1,6 +1,6 @@
 """Player model for KSell Entreprise."""
 
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from ksell.pojo.product import Product
 from ksell.pojo.user import User
@@ -67,23 +67,6 @@ class Player:
             if item.product.name == product_name:
                 return item.avg_cost
         return 0.0
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Serialize player to dictionary."""
-        return {
-            "user": self.user.to_dict(),
-            "inventory": [item.to_dict() for item in self.inventory],
-        }
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Player":
-        """Deserialize player from dictionary."""
-        from ksell.pojo.user import User
-
-        user = User.from_dict(data["user"])
-        player = cls(user=user)
-        player.inventory = [ProductModel.from_dict(item) for item in data.get("inventory", [])]
-        return player
 
     def __repr__(self) -> str:
         return f"Player(username={self.username!r}, balance={self.balance})"

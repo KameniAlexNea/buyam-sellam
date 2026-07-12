@@ -164,8 +164,16 @@ class Table:
 
         return {
             "round": self.current_round,
-            "dice": self.dice.to_dict(),
-            "markets": [m.to_dict() for m in self.markets],
+            "dice": {"die1": self.dice.die1, "die2": self.dice.die2, "total": self.dice.total},
+            "markets": [
+                {
+                    "product": m.product,
+                    "market_fixed_price": m.market_fixed_price,
+                    "market_supply": m.market_supply,
+                    "location": m.location.name,
+                }
+                for m in self.markets
+            ],
         }
 
     def get_leaderboard(self) -> List[Dict[str, Any]]:
