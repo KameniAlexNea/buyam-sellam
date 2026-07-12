@@ -7,6 +7,7 @@ import random
 from typing import Any, Dict, List, Optional
 
 from ksell.model.dice import Dice
+from ksell.model.difficulty import DifficultyConfig
 from ksell.model.player import Player
 from ksell.model.market_board import MarketBoard, DICE_BASE
 from ksell.pojo.market import Market
@@ -16,12 +17,18 @@ from ksell.pojo.product import Product
 class Table:
     """The game table containing all players and active markets."""
 
-    def __init__(self, players: Optional[List[Player]] = None, total_rounds: int = 10):
+    def __init__(
+        self,
+        players: Optional[List[Player]] = None,
+        total_rounds: int = 10,
+        difficulty: Optional[DifficultyConfig] = None,
+    ):
         self.players: List[Player] = players if players is not None else []
         self.markets: List[MarketBoard] = []
         self.dice: Dice = Dice.shake()
         self.current_round: int = 0
         self.total_rounds: int = total_rounds
+        self.difficulty: Optional[DifficultyConfig] = difficulty
 
     def add_player(self, player: Player) -> bool:
         for p in self.players:
@@ -48,9 +55,27 @@ class Table:
 
         Each product can appear in multiple markets at different prices,
         enabling buy-low-sell-high strategies.
+
+        Uses self.difficulty if set; otherwise falls back to default (Medium-like) ranges.
         """
         self.dice = Dice.shake()
         self.markets.clear()
+
+        # Use difficulty config or fall back to defaults
+        diff = self.difficulty
+        if diff is None:
+            # Default (Medium-like) fallback for backward compatibility
+            min_qty_range = (10, 50)
+            max_qty_range = (50, 150)
+            tax_rate_range = (0.01, 0.10)
+            fixed_price_range = (200, 1200)
+            markets_per_product_range = (1, 3)
+        else:
+            min_qty_range = diff.min_qty_range
+            max_qty_range = diff.max_qty_range
+            tax_rate_range = diff.tax_rate_range
+            fixed_price_range = diff.fixed_price_range
+            markets_per_product_range = diff.markets_per_product_range
 
         # Available products for the game
         product_names = [
@@ -77,29 +102,31 @@ class Table:
         shuffled_names = market_names.copy()
         random.shuffle(shuffled_names)
 
-        # Each product appears in 1-3 markets (at different prices)
-        markets_per_product = random.randint(1, 3)
+        # Max appearances per product (sampled from difficulty range)
+        max_markets_per_product = random.randint(*markets_per_product_range)
         market_idx = 0
 
         for product_name in product_names:
-            num_appearances = random.randint(1, markets_per_product)
+            num_appearances = random.randint(1, max_markets_per_product)
 
             for _ in range(num_appearances):
                 if market_idx >= len(shuffled_names):
                     break
 
-                max_qty = random.randint(50, 150)
-                min_qty = random.randint(10, max_qty)
+                max_qty = random.randint(*max_qty_range)
+                min_qty = random.randint(*min_qty_range)
+                # Ensure min <= max
+                if min_qty > max_qty:
+                    min_qty, max_qty = max_qty, min_qty
 
                 market = Market(
                     id=f"market_{market_idx}",
                     name=shuffled_names[market_idx],
                     min_qty=min_qty,
                     max_qty=max_qty,
-                    tax_rate=round(random.uniform(0.01, 0.10), 2),
+                    tax_rate=round(random.uniform(*tax_rate_range), 2),
                     product=product_name,
-                    fixed_price=(random.randint(1, 6) + random.randint(1, 6))
-                    * 100,  # 200-1200 FCFA
+                    fixed_price=random.randint(*fixed_price_range),
                 )
                 market_board = MarketBoard(location=market, dice=self.dice)
                 self.markets.append(market_board)
@@ -108,16 +135,22 @@ class Table:
         return self.markets
 
     def initialize_player_inventory(
-        self, units_per_player: int = 20
+        self, units_per_player: Optional[int] = None
     ) -> Dict[str, List[str]]:
         """Initialize each player with random starting products.
 
         Args:
-            units_per_player: Total units to distribute per player (default 20)
+            units_per_player: Total units to distribute per player.
+                If None, uses self.difficulty.units_per_player (default 20).
 
         Returns:
             Dictionary mapping player username to their starting inventory strings
         """
+        if units_per_player is None:
+            units_per_player = (
+                self.difficulty.units_per_player if self.difficulty is not None else 20
+            )
+
         available_products = list(
             set([market.location.product for market in self.markets])
         )
