@@ -535,7 +535,7 @@ class Table:
     ) -> Dict[str, Any]:
         """Process a sell action with new mechanics.
 
-        Sell condition: dice_price < market_price → market auto-buys at dice price.
+        Sell condition: dice_price <= market_price → market auto-buys at dice price.
         No capacity check needed - market buys immediately.
 
         Args:
@@ -549,10 +549,10 @@ class Table:
         dice_price = dice_total * DICE_BASE
         market_price = market.market_fixed_price
 
-        if dice_price >= market_price:
+        if dice_price > market_price:
             return {
                 "success": False,
-                "error": f"Your dice price ({dice_price} FCFA) is not lower than market price ({market_price} FCFA). Sell failed.",
+                "error": f"Your dice price ({dice_price} FCFA) is great than market price ({market_price} FCFA). Sell failed.",
                 "dice_price": dice_price,
                 "market_price": market_price,
             }
