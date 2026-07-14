@@ -19,9 +19,11 @@ from typing import Any, Dict, List, Tuple
 # Types
 # ---------------------------------------------------------------------------
 
-MarketDict = Dict[str, Any]  # market_index, name, product, market_fixed_price, market_supply
+MarketDict = Dict[
+    str, Any
+]  # market_index, name, product, market_fixed_price, market_supply
 PlayerDict = Dict[str, Any]  # username, balance, inventory[...]
-StateDict = Dict[str, Any]   # full GameStateResponse
+StateDict = Dict[str, Any]  # full GameStateResponse
 
 
 # ---------------------------------------------------------------------------
@@ -90,17 +92,13 @@ class Strategy(abc.ABC):
     @staticmethod
     def _owned_products(player: PlayerDict) -> Dict[str, Dict[str, Any]]:
         """Return {product_name: inventory_item} for a player."""
-        return {
-            item["product"]["name"]: item
-            for item in player.get("inventory", [])
-        }
+        return {item["product"]["name"]: item for item in player.get("inventory", [])}
 
     @staticmethod
     def _inventory_value(player: PlayerDict) -> float:
         """Total inventory value (quantity × avg_cost)."""
         return sum(
-            item["quantity"] * item["avg_cost"]
-            for item in player.get("inventory", [])
+            item["quantity"] * item["avg_cost"] for item in player.get("inventory", [])
         )
 
     @staticmethod
@@ -266,8 +264,8 @@ class ConservativeTrader(Strategy):
     label = "ConservativeTrader"
     description = "Trade only on very favorable conditions; preserve capital"
 
-    BUY_THRESHOLD = 0.4   # Buy only if price is in bottom 40% of round prices
-    SELL_MARGIN = 0.25    # Sell only with 25%+ margin
+    BUY_THRESHOLD = 0.4  # Buy only if price is in bottom 40% of round prices
+    SELL_MARGIN = 0.25  # Sell only with 25%+ margin
 
     def choose_strategy(
         self,
@@ -363,9 +361,7 @@ class MarketSniper(Strategy):
 
         scored.sort(key=lambda x: x[1], reverse=True)
         top_indices = {idx for idx, _, _ in scored[: self.TOP_N]}
-        bottom_indices = {
-            idx for idx, _, _ in scored[-self.TOP_N:]
-        }
+        bottom_indices = {idx for idx, _, _ in scored[-self.TOP_N :]}
 
         strategy: List[Tuple[int, str]] = []
 
@@ -373,7 +369,11 @@ class MarketSniper(Strategy):
             idx = m["market_index"]
             product = m["product"]
 
-            if idx in top_indices and product not in owned and balance > m["market_fixed_price"] * 5:
+            if (
+                idx in top_indices
+                and product not in owned
+                and balance > m["market_fixed_price"] * 5
+            ):
                 strategy.append((idx, "buy"))
             elif product in owned and idx in bottom_indices:
                 # Low supply / high price market — good place to sell
@@ -418,9 +418,7 @@ def get_strategy(name: str) -> Strategy:
     cls = ALL_STRATEGIES.get(name.lower().replace(" ", ""))
     if cls is None:
         available = ", ".join(sorted(ALL_STRATEGIES.keys()))
-        raise ValueError(
-            f"Unknown strategy '{name}'. Available: {available}"
-        )
+        raise ValueError(f"Unknown strategy '{name}'. Available: {available}")
     return cls()
 
 

@@ -47,7 +47,7 @@ def render_dice(
         return (
             '<div class="dice-tray is-waiting">'
             '<div class="die-face">?</div><div class="die-face">?</div>'
-            f'<span>{esc(label)}</span></div>'
+            f"<span>{esc(label)}</span></div>"
         )
 
     if values is None:
@@ -58,7 +58,7 @@ def render_dice(
     return (
         '<div class="dice-tray">'
         f'<div class="die-face">{die_one}</div><div class="die-face">{die_two}</div>'
-        f'<span>{esc(label)}: <strong>{total}</strong></span></div>'
+        f"<span>{esc(label)}: <strong>{total}</strong></span></div>"
     )
 
 
@@ -66,8 +66,7 @@ def render_turn_rolls(rolls: List[tuple[str, int, tuple[int, int]]]) -> str:
     if not rolls:
         return ""
     dice = "".join(
-        render_dice(total, username, values)
-        for username, total, values in rolls
+        render_dice(total, username, values) for username, total, values in rolls
     )
     return (
         '<section class="action-panel">'
@@ -92,15 +91,17 @@ def render_status_bar(
         "game_over": "🏆 Game Over",
     }
     phase_label = phase_labels.get(phase, phase.replace("_", " ").title())
-    difficulty_chip = f'<span class="hud-chip">🎯 {esc(difficulty)}</span>' if difficulty else ""
+    difficulty_chip = (
+        f'<span class="hud-chip">🎯 {esc(difficulty)}</span>' if difficulty else ""
+    )
     return (
         '<section class="hud-panel">'
         '<div><span class="eyebrow">🎲 Live Game</span>'
-        f'<h2>Round {round_number} / {total_rounds}</h2></div>'
+        f"<h2>Round {round_number} / {total_rounds}</h2></div>"
         '<div class="hud-stats">'
         f'<span class="hud-chip">{esc(phase_label)}</span>{difficulty_chip}'
         f'<span class="hud-chip balance-chip">💰 {esc(balance)}</span>'
-        '</div></section>'
+        "</div></section>"
     )
 
 
@@ -114,16 +115,16 @@ def render_inventory(player: Optional[Player]) -> str:
         for item in player.inventory:
             cards.append(
                 '<article class="inventory-card">'
-                f'{product_badge(item.product.name)}'
-                f'<strong>{item.quantity}</strong>'
-                f'<span>Avg {item.avg_cost:,.0f}</span>'
-                '</article>'
+                f"{product_badge(item.product.name)}"
+                f"<strong>{item.quantity}</strong>"
+                f"<span>Avg {item.avg_cost:,.0f}</span>"
+                "</article>"
             )
         inventory = f'<div class="inventory-grid">{"".join(cards)}</div>'
     return (
         '<section class="side-panel">'
         '<div class="panel-heading"><span class="eyebrow">📦 Warehouse</span><h3>Your Stock</h3></div>'
-        f'{inventory}</section>'
+        f"{inventory}</section>"
     )
 
 
@@ -133,12 +134,16 @@ def render_markets(markets: List[MarketBoard]) -> str:
             '<section class="board-empty">'
             '<p style="font-size:3rem;margin:0 0 12px;">\U0001f3b2</p>'
             '<p class="empty-state">Hit <strong>Start Game</strong> to open the markets and begin trading.</p>'
-            '</section>'
+            "</section>"
         )
 
     cards = []
     for idx, market in enumerate(markets, 1):
-        supply_pct = 0 if market.total_qty <= 0 else int((market.market_supply / market.total_qty) * 100)
+        supply_pct = (
+            0
+            if market.total_qty <= 0
+            else int((market.market_supply / market.total_qty) * 100)
+        )
         supply_pct = max(0, min(100, supply_pct))
         fee = getattr(market, "sell_entry_fee", 0)
         cards.append(
@@ -146,23 +151,25 @@ def render_markets(markets: List[MarketBoard]) -> str:
             '<div class="market-topline">'
             f'<span class="market-number">M{idx}</span>'
             f'<span class="market-name">{esc(market.location.name)}</span>'
-            '</div>'
-            f'{product_badge(market.location.product)}'
+            "</div>"
+            f"{product_badge(market.location.product)}"
             '<div class="market-economy">'
-            f'<div><span>Market pays</span><strong>{market.market_fixed_price:,}</strong></div>'
-            f'<div><span>Entry fee</span><strong>{fee:,}</strong></div>'
-            '</div>'
+            f"<div><span>Market pays</span><strong>{market.market_fixed_price:,}</strong></div>"
+            f"<div><span>Entry fee</span><strong>{fee:,}</strong></div>"
+            "</div>"
             '<div class="supply-line">'
-            f'<span>Supply {market.market_supply}/{market.total_qty}</span>'
-            f'<span>{supply_pct}%</span>'
-            '</div>'
+            f"<span>Supply {market.market_supply}/{market.total_qty}</span>"
+            f"<span>{supply_pct}%</span>"
+            "</div>"
             f'<div class="supply-meter"><span style="width:{supply_pct}%"></span></div>'
-            '</article>'
+            "</article>"
         )
-    return '<section class="market-grid">' + "".join(cards) + '</section>'
+    return '<section class="market-grid">' + "".join(cards) + "</section>"
 
 
-def render_opponents(players: Iterable[Player], human_username: str, starting_balance: float) -> str:
+def render_opponents(
+    players: Iterable[Player], human_username: str, starting_balance: float
+) -> str:
     opponents = [p for p in players if p.username != human_username]
     if not opponents:
         return ""
@@ -175,16 +182,16 @@ def render_opponents(players: Iterable[Player], human_username: str, starting_ba
             '<article class="opponent-card">'
             '<div class="avatar-token">AI</div>'
             '<div class="opponent-body">'
-            f'<strong>{esc(player.username)}</strong>'
-            f'<span>{money(player.balance)} · {sign}{profit:,.0f} P/L</span>'
-            f'<small>{inventory_count} goods in stock</small>'
-            '</div></article>'
+            f"<strong>{esc(player.username)}</strong>"
+            f"<span>{money(player.balance)} · {sign}{profit:,.0f} P/L</span>"
+            f"<small>{inventory_count} goods in stock</small>"
+            "</div></article>"
         )
     return (
         '<section class="side-panel opponents-panel">'
         '<div class="panel-heading"><span class="eyebrow">🤖 Opponents</span><h3>Rival Traders</h3></div>'
         + "".join(rows)
-        + '</section>'
+        + "</section>"
     )
 
 
@@ -193,7 +200,7 @@ def render_strategy_help() -> str:
         '<section class="side-panel">'
         '<div class="panel-heading"><span class="eyebrow">🧠 Trade Console</span><h3>Set Your Moves</h3></div>'
         '<p class="empty-state">Pick <strong>Buy</strong>, <strong>Sell</strong>, or <strong>Skip</strong> for each open market below, then hit <strong>Play</strong> to roll.</p>'
-        '</section>'
+        "</section>"
     )
 
 
@@ -202,21 +209,21 @@ def render_action_prompt(action: dict[str, Any]) -> str:
     dice = render_dice(action.get("dice_total"), "Your roll", action.get("dice_values"))
     if action["type"] == "buy":
         body = (
-            f'<p>{product_badge(market.location.product)}</p>'
+            f"<p>{product_badge(market.location.product)}</p>"
             f'<div class="action-stat"><span>Dice price</span><strong>{action["dice_price"]:,}</strong></div>'
             f'<div class="action-stat"><span>Market price</span><strong>{action["market_price"]:,}</strong></div>'
             f'<div class="action-callout">You can buy up to <strong>{action["max_affordable"]}</strong> units.</div>'
         )
-        title = f'🛒 Buy at {esc(market.location.name)}'
+        title = f"🛒 Buy at {esc(market.location.name)}"
     else:
         body = (
-            f'<p>{product_badge(action["product_name"])}</p>'
+            f"<p>{product_badge(action['product_name'])}</p>"
             f'<div class="action-stat"><span>Dice price</span><strong>{action["dice_price"]:,}</strong></div>'
             f'<div class="action-stat"><span>Market price</span><strong>{action["market_price"]:,}</strong></div>'
             f'<div class="action-stat"><span>Fee paid</span><strong>{action["entry_fee"]:,}</strong></div>'
             f'<div class="action-callout">You can sell up to <strong>{action["seller_qty"]}</strong> units.</div>'
         )
-        title = f'💸 Sell at {esc(market.location.name)}'
+        title = f"💸 Sell at {esc(market.location.name)}"
     return (
         '<section class="action-panel">'
         f'<div><span class="eyebrow">⚡ Live Deal</span><h3>{title}</h3></div>{dice}'
@@ -227,31 +234,40 @@ def render_action_prompt(action: dict[str, Any]) -> str:
 def render_round_summary(summary: str) -> str:
     if not summary:
         summary = "No completed trades this round."
-    lines = "".join(f'<li>{esc(line)}</li>' for line in summary.splitlines() if line.strip())
+    lines = "".join(
+        f"<li>{esc(line)}</li>" for line in summary.splitlines() if line.strip()
+    )
     return (
         '<section class="action-panel">'
         '<div><span class="eyebrow">📋 Round Report</span><h3>Market Movement</h3></div>'
         f'<ul class="event-list">{lines}</ul><p class="next-copy">Press <strong>Next</strong> to continue trading.</p>'
-        '</section>'
+        "</section>"
     )
 
 
 def render_standings(players: List[Player], starting_balance: float) -> str:
     rows = []
-    for index, player in enumerate(sorted(players, key=lambda p: p.balance, reverse=True), 1):
+    for index, player in enumerate(
+        sorted(players, key=lambda p: p.balance, reverse=True), 1
+    ):
         profit = player.balance - starting_balance
         sign = "+" if profit >= 0 else ""
-        inventory = ", ".join(f"{item.product.name} x{item.quantity}" for item in player.inventory) or "Empty"
+        inventory = (
+            ", ".join(
+                f"{item.product.name} x{item.quantity}" for item in player.inventory
+            )
+            or "Empty"
+        )
         rows.append(
-            '<tr>'
-            f'<td>{index}</td><td>{esc(player.username)}</td><td>{money(player.balance)}</td>'
-            f'<td>{sign}{profit:,.0f}</td><td>{esc(inventory)}</td>'
-            '</tr>'
+            "<tr>"
+            f"<td>{index}</td><td>{esc(player.username)}</td><td>{money(player.balance)}</td>"
+            f"<td>{sign}{profit:,.0f}</td><td>{esc(inventory)}</td>"
+            "</tr>"
         )
     return (
         '<section class="standings-panel"><table class="game-table">'
-        '<thead><tr><th>#</th><th>Trader</th><th>Balance</th><th>P/L</th><th>Inventory</th></tr></thead>'
-        f'<tbody>{"".join(rows)}</tbody></table></section>'
+        "<thead><tr><th>#</th><th>Trader</th><th>Balance</th><th>P/L</th><th>Inventory</th></tr></thead>"
+        f"<tbody>{''.join(rows)}</tbody></table></section>"
     )
 
 
@@ -261,8 +277,8 @@ def render_log(lines: List[str]) -> str:
     items = []
     for line in lines[-28:]:
         cleaned = line.strip() or "-"
-        items.append(f'<li>{esc(cleaned)}</li>')
-    return '<ol class="timeline">' + "".join(items) + '</ol>'
+        items.append(f"<li>{esc(cleaned)}</li>")
+    return '<ol class="timeline">' + "".join(items) + "</ol>"
 
 
 def render_world_panel(
@@ -272,7 +288,11 @@ def render_world_panel(
     extra: str = "",
 ) -> str:
     human = next((p for p in players if p.username == human_username), None)
-    return render_inventory(human) + render_opponents(players, human_username, starting_balance) + extra
+    return (
+        render_inventory(human)
+        + render_opponents(players, human_username, starting_balance)
+        + extra
+    )
 
 
 def render_error(error: str, content: str) -> str:
