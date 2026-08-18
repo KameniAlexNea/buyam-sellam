@@ -40,6 +40,7 @@ pip-delete-this-directory.txt
 htmlcov/
 .tox/
 .nox/
+.ruff_cache/
 .coverage
 .coverage.*
 .cache
@@ -218,5 +219,13 @@ __marimo__/
 .streamlit/secrets.toml
 
 # Game state files (progressive JSON state written to out/)
-out/
+backend/out/
+
+# Next.js frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local
+frontend/.env*.local
+frontend/tsconfig.tsbuildinfo
 simulate/

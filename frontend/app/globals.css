@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-deep: #0b0f1e;
+  --bg-board: #121a2e;
+  --bg-card: #182240;
+  --gold: #ffcc00;
+}
+
+html,
+body {
+  min-height: 100vh;
+}
+
+body {
+  background-color: var(--bg-deep);
+  background-image:
+    radial-gradient(ellipse at 15% 5%, rgba(77, 148, 255, 0.08) 0%, transparent 45%),
+    radial-gradient(ellipse at 85% 90%, rgba(179, 102, 255, 0.06) 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 50%, rgba(0, 212, 255, 0.04) 0%, transparent 55%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 60px,
+      rgba(100, 180, 255, 0.02) 60px,
+      rgba(100, 180, 255, 0.02) 61px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 60px,
+      rgba(100, 180, 255, 0.02) 60px,
+      rgba(100, 180, 255, 0.02) 61px
+    );
+  color: #d4daf0;
+  font-family: var(--font-chakra), "Segoe UI", sans-serif;
+  background-attachment: fixed;
+}
+
+/* Subtle scrollbars for the log feed */
+.scroll-slim::-webkit-scrollbar {
+  width: 8px;
+}
+.scroll-slim::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-slim::-webkit-scrollbar-thumb {
+  background: rgba(100, 180, 255, 0.18);
+  border-radius: 8px;
+}
+.scroll-slim::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 180, 255, 0.35);
+}
+
+/* Gold shimmer text for the hero title */
+.text-shimmer {
+  background: linear-gradient(
+    100deg,
+    #ffcc00 20%,
+    #fff3b0 40%,
+    #ffcc00 60%,
+    #ffb300 80%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4s linear infinite;
+}
+
+/* Range slider styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 9999px;
+  background: #1e2d52;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: #ffcc00;
+  border: 3px solid #0b0f1e;
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.6);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: #ffcc00;
+  border: 3px solid #0b0f1e;
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.6);
+  cursor: pointer;
+}
