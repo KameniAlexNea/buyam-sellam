@@ -1,7 +1,5 @@
 """HTML render helpers for the Buyam-Sellam Gradio game UI."""
 
-from __future__ import annotations
-
 import html
 from typing import Any, Iterable, List, Optional
 

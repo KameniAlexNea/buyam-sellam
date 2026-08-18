@@ -8,8 +8,6 @@ Strategies receive the same data that the REST API returns, so they
 work identically whether driven by `game_sim_api.py` or `batch_sim.py`.
 """
 
-from __future__ import annotations
-
 import abc
 import random
 from typing import Any, Dict, List, Tuple
