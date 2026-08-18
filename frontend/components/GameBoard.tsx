@@ -3,16 +3,16 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import type { Results } from "@/lib/types";
+import type { MarketAction, Results } from "@/lib/types";
 import { useGameState } from "@/lib/useGameState";
 import { DIFFICULTY_META, phaseLabel } from "@/lib/format";
-import PlayerHUD from "./PlayerHUD";
-import MarketGrid from "./MarketGrid";
+import Board from "./Board";
 import StrategyPanel from "./StrategyPanel";
 import ActionPanel from "./ActionPanel";
 import ResultsPanel from "./ResultsPanel";
 import GameLog from "./GameLog";
-import Leaderboard from "./Leaderboard";
+
+const CYCLE: MarketAction[] = ["skip", "buy", "sell"];
 
 export default function GameBoard({ gameId }: { gameId: string }) {
   const {
@@ -20,10 +20,11 @@ export default function GameBoard({ gameId }: { gameId: string }) {
     history,
     loading,
     error,
-    humanUsername,
+    humanPlayers,
+    isHuman,
+    currentPlanner,
     busy,
     canSubmitStrategy,
-    humanActionPending,
     botsStrategizing,
     refresh,
     submitStrategy,
@@ -31,6 +32,8 @@ export default function GameBoard({ gameId }: { gameId: string }) {
   } = useGameState(gameId);
 
   const [results, setResults] = useState<Results | null>(null);
+  const [choices, setChoices] = useState<Record<number, MarketAction>>({});
+  const [showLog, setShowLog] = useState(false);
 
   const gameOver = game?.phase === "game_over";
 
@@ -43,6 +46,11 @@ export default function GameBoard({ gameId }: { gameId: string }) {
         .catch(() => undefined);
     }
   }, [gameOver, results, gameId]);
+
+  // Fresh plan selections each time a new planner takes the stage.
+  useEffect(() => {
+    setChoices({});
+  }, [game?.round_number, currentPlanner]);
 
   if (loading && !game) {
     return (
@@ -84,13 +92,76 @@ export default function GameBoard({ gameId }: { gameId: string }) {
 
   if (!game) return null;
 
-  const humanPlayer =
-    game.players.find((p) => p.username === humanUsername) ?? null;
   const diff = DIFFICULTY_META[game.difficulty] ?? DIFFICULTY_META.medium;
+  const plannerPlayer =
+    game.players.find((p) => p.username === currentPlanner) ?? null;
+  const isHumanTurn =
+    game.phase === "action" && !!game.current_player && isHuman(game.current_player);
+
+  // Tap a market tile on the board to cycle Skip → Buy → Sell.
+  const onMarketTap = (index: number) => {
+    if (!currentPlanner) return;
+    setChoices((prev) => {
+      const cur = prev[index] ?? "skip";
+      const next = CYCLE[(CYCLE.indexOf(cur) + 1) % CYCLE.length];
+      return { ...prev, [index]: next };
+    });
+  };
+
+  const onChoice = (index: number, action: MarketAction) => {
+    setChoices((prev) => ({ ...prev, [index]: action }));
+  };
+
+  const confirmStrategy = async () => {
+    if (!currentPlanner) return;
+    const strategy = game.markets.map((m) => ({
+      market_index: m.market_index,
+      action: choices[m.market_index] ?? "skip",
+    }));
+    await submitStrategy(currentPlanner, strategy);
+  };
+
+  let center: React.ReactNode;
+  if (game.phase === "strategy" && canSubmitStrategy) {
+    center = (
+      <StrategyPanel
+        markets={game.markets}
+        planner={currentPlanner ?? ""}
+        plannerPlayer={plannerPlayer}
+        choices={choices}
+        onChoice={onChoice}
+        busy={busy}
+        onConfirm={confirmStrategy}
+      />
+    );
+  } else if (game.phase === "strategy") {
+    center = (
+      <Waiting
+        text={
+          botsStrategizing
+            ? "Waiting for the bots to plan…"
+            : "All plans are in — resolving the round…"
+        }
+      />
+    );
+  } else if (game.phase === "action") {
+    center = (
+      <ActionPanel
+        game={game}
+        isHumanTurn={isHumanTurn}
+        busy={busy}
+        onExecute={executeAction}
+      />
+    );
+  } else if (game.phase === "game_over") {
+    center = <ResultsPanel results={results} humanPlayers={humanPlayers} />;
+  } else {
+    center = <Waiting text={game.message || phaseLabel(game.phase)} />;
+  }
 
   return (
     <Shell>
-      {/* Header / HUD */}
+      {/* Header */}
       <header className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/"
@@ -108,105 +179,60 @@ export default function GameBoard({ gameId }: { gameId: string }) {
           <span className="rounded-lg border border-[rgba(100,180,255,0.2)] bg-card/60 px-3 py-1.5 font-display text-xs font-bold uppercase tracking-widest text-cyan">
             {phaseLabel(game.phase)}
           </span>
+          <button
+            type="button"
+            onClick={() => setShowLog((v) => !v)}
+            className="rounded-lg border border-[rgba(100,180,255,0.2)] bg-card/60 px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-dim transition-colors hover:border-gold/40 hover:text-gold"
+          >
+            {showLog ? "Hide" : "📜"} Log
+          </button>
         </div>
       </header>
 
-      {/* Message banner */}
+      {/* Compact message */}
       {game.message && (
-        <div className="animate-fade-in-up rounded-xl border border-[rgba(100,180,255,0.14)] bg-board/70 px-4 py-3 text-sm text-bright shadow-glow">
+        <p className="animate-fade-in-up truncate rounded-lg border border-[rgba(100,180,255,0.12)] bg-board/50 px-3 py-1.5 text-center text-xs text-bright">
           {game.message}
-        </div>
+        </p>
       )}
 
-      {/* Player HUD */}
-      <PlayerHUD
+      {/* The board */}
+      <Board
         players={game.players}
         playerRoles={game.player_roles}
+        markets={game.markets}
+        phase={game.phase}
+        humanPlayers={humanPlayers}
         currentPlayer={game.current_player}
-        humanUsername={humanUsername}
+        currentPlanner={currentPlanner}
+        currentMarketIndex={game.current_market_index}
+        choices={choices}
+        onMarketTap={onMarketTap}
+        center={center}
       />
 
-      {/* Markets */}
-      <section>
-        <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-[0.2em] text-dim">
-          🌐 Active Markets
-        </h2>
-        <MarketGrid
-          markets={game.markets}
-          currentMarketIndex={game.current_market_index}
-        />
-      </section>
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_20rem]">
-        {/* Main phase panel */}
-        <section className="min-w-0">
-          {game.phase === "strategy" && canSubmitStrategy && (
-            <StrategyPanel
-              markets={game.markets}
-              humanPlayer={humanPlayer}
-              busy={busy}
-              onSubmit={submitStrategy}
-            />
-          )}
-
-          {game.phase === "strategy" && !canSubmitStrategy && (
-            <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-6 shadow-card">
-              <span className="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-gold">
-                🧠 Strategy Phase
-              </span>
-              <div className="mt-3 flex items-center gap-3">
-                {botsStrategizing ? (
-                  <>
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
-                    <p className="text-sm text-dim">
-                      Waiting for the bots to lock in their strategies…
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-sm text-dim">
-                    All strategies are in. Resolving the round…
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {game.phase === "action" && (
-            <ActionPanel
-              game={game}
-              humanUsername={humanUsername}
-              busy={busy}
-              onExecute={executeAction}
-            />
-          )}
-
-          {game.phase === "game_over" && (
-            <ResultsPanel results={results} humanUsername={humanUsername} />
-          )}
-
-          {!["strategy", "action", "game_over"].includes(game.phase) && (
-            <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-8 text-center shadow-card">
-              <p className="font-display text-sm uppercase tracking-widest text-dim">
-                {phaseLabel(game.phase)}
-              </p>
-              <p className="mt-2 text-sm text-dim">{game.message || "Stand by…"}</p>
-            </div>
-          )}
-        </section>
-
-        {/* Sidebar */}
-        <aside className="space-y-6">
-          <Leaderboard players={game.players} currentPlayer={game.current_player} />
+      {/* Optional event log */}
+      {showLog && (
+        <div className="animate-fade-in-up rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3 shadow-card">
           <GameLog history={history} />
-        </aside>
-      </div>
+        </div>
+      )}
     </Shell>
+  );
+}
+
+function Waiting({ text }: { text: string }) {
+  return (
+    <div className="flex flex-col items-center gap-3 px-4 text-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
+      <p className="text-sm text-dim">{text}</p>
+    </div>
   );
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
+    <div className="mx-auto max-w-5xl space-y-4 px-4 py-6 sm:px-6">
       <div className="text-center">
         <span className="font-display text-[11px] font-bold uppercase tracking-[0.4em] text-gold/80">
           Buyam-Sellam

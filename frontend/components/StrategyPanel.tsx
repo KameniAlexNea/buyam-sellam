@@ -1,123 +1,110 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { MarketAction, MarketInfo, PlayerInfo } from "@/lib/types";
 import { money, productMeta, TONE_CLASSES } from "@/lib/format";
-import type { StrategyChoice } from "@/lib/useGameState";
 
 interface StrategyPanelProps {
   markets: MarketInfo[];
-  humanPlayer?: PlayerInfo | null;
+  planner: string;
+  plannerPlayer?: PlayerInfo | null;
+  choices: Record<number, MarketAction>;
+  onChoice: (index: number, action: MarketAction) => void;
   busy?: boolean;
-  onSubmit: (choices: StrategyChoice[]) => void;
+  onConfirm: () => void;
 }
 
 const ACTIONS: { value: MarketAction; label: string; icon: string; active: string }[] = [
-  { value: "buy", label: "Buy", icon: "⬇", active: "bg-buy/20 border-buy text-buy" },
-  { value: "sell", label: "Sell", icon: "⬆", active: "bg-sell/20 border-sell text-sell" },
-  { value: "skip", label: "Skip", icon: "—", active: "bg-dim/20 border-dim text-dim" },
+  { value: "buy", label: "Buy", icon: "⬇", active: "bg-buy/25 border-buy text-buy" },
+  { value: "sell", label: "Sell", icon: "⬆", active: "bg-sell/25 border-sell text-sell" },
+  { value: "skip", label: "Skip", icon: "—", active: "bg-dim/25 border-dim text-dim" },
 ];
 
 export default function StrategyPanel({
   markets,
-  humanPlayer,
+  planner,
+  plannerPlayer,
+  choices,
+  onChoice,
   busy,
-  onSubmit,
+  onConfirm,
 }: StrategyPanelProps) {
-  const [choices, setChoices] = useState<Record<number, MarketAction>>({});
-
   const ownedProducts = useMemo(() => {
     const map: Record<string, number> = {};
-    humanPlayer?.inventory.forEach((it) => {
+    plannerPlayer?.inventory.forEach((it) => {
       map[it.product.name] = it.quantity;
     });
     return map;
-  }, [humanPlayer]);
+  }, [plannerPlayer]);
 
-  const canSell = (product: string) => (ownedProducts[product] ?? 0) > 0;
-
-  const setAction = (index: number, action: MarketAction) => {
-    setChoices((prev) => ({ ...prev, [index]: action }));
-  };
-
-  const handleSubmit = () => {
-    const strategy = markets.map((m) => ({
-      market_index: m.market_index,
-      action: choices[m.market_index] ?? "skip",
-    }));
-    onSubmit(strategy);
-  };
+  const chosen = markets.filter((m) => (choices[m.market_index] ?? "skip") !== "skip").length;
 
   return (
-    <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-5 shadow-card">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <span className="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-gold">
-            🧠 Strategy Phase
-          </span>
-          <h3 className="mt-1 font-display text-xl font-bold uppercase">
-            Plan your trades
-          </h3>
-        </div>
-        {humanPlayer && (
-          <span className="text-xs text-dim">
-            Balance: <span className="font-semibold text-bright">{money(humanPlayer.balance)}</span>
-          </span>
+    <div className="flex w-full flex-col items-center gap-4">
+      <div className="text-center">
+        <span className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">
+          🧠 Strategy
+        </span>
+        <h3 className="mt-1 font-display text-lg font-bold uppercase tracking-wide">
+          {planner} — plan your moves
+        </h3>
+        <p className="mt-0.5 text-[11px] text-dim">
+          Tap a market on the board, or pick below. {plannerPlayer && (
+            <>
+              · cash <span className="text-bright">{money(plannerPlayer.balance)}</span>
+            </>
+          )}
+        </p>
+        {plannerPlayer && plannerPlayer.inventory.length > 0 && (
+          <p className="mt-1 text-[11px] text-dim">
+            You own:{" "}
+            {plannerPlayer.inventory.map((it) => (
+              <span key={it.product.name} className="mx-0.5">
+                {productMeta(it.product.name).icon}
+                {it.quantity}
+              </span>
+            ))}
+          </p>
         )}
       </div>
 
-      <div className="space-y-3">
+      <div className="grid w-full max-w-md grid-cols-1 gap-1.5">
         {markets.map((m) => {
           const meta = productMeta(m.product);
-          const owned = ownedProducts[m.product] ?? 0;
-          const sellDisabled = !canSell(m.product);
+          const canSell = (ownedProducts[m.product] ?? 0) > 0;
           return (
             <div
               key={m.market_index}
-              className="flex flex-col gap-3 rounded-xl border border-[rgba(100,180,255,0.08)] bg-board/60 p-3 sm:flex-row sm:items-center sm:justify-between"
+              className="flex items-center justify-between gap-2 rounded-xl border border-[rgba(100,180,255,0.1)] bg-board/50 px-2.5 py-1.5"
             >
-              <div className="flex items-center gap-3">
-                <span className={`flex h-10 w-10 items-center justify-center rounded-lg border text-lg ${TONE_CLASSES[meta.tone]}`}>
+              <div className="flex min-w-0 items-center gap-2">
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-base ${TONE_CLASSES[meta.tone]}`}>
                   {meta.icon}
                 </span>
-                <div>
-                  <p className="font-semibold text-bright">
-                    {m.name}{" "}
-                    <span className="font-normal text-dim">
-                      ({m.product})
-                    </span>
-                  </p>
-                  <p className="text-xs text-dim">
-                    <span className="text-cyan">{money(m.market_fixed_price)}</span> · tax{" "}
-                    {(m.tax_rate * 100).toFixed(0)}% · supply {m.market_supply}u
-                    {owned > 0 && (
-                      <span className="ml-2 text-buy">
-                        you own {owned}u
-                      </span>
-                    )}
-                  </p>
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-semibold">{m.product}</p>
+                  <p className="text-[10px] text-cyan">{money(m.market_fixed_price)}</p>
                 </div>
               </div>
-
-              <div className="flex gap-1.5">
+              <div className="flex gap-1">
                 {ACTIONS.map((a) => {
                   const selected = (choices[m.market_index] ?? "skip") === a.value;
-                  const disabled = a.value === "sell" && sellDisabled;
+                  const disabled = a.value === "sell" && !canSell;
                   return (
                     <button
                       key={a.value}
                       type="button"
                       disabled={disabled}
-                      onClick={() => setAction(m.market_index, a.value)}
+                      onClick={() => onChoice(m.market_index, a.value)}
                       title={
                         disabled
-                          ? `You don't have ${m.product} in your inventory`
+                          ? `${planner} doesn't have ${m.product} in inventory`
                           : undefined
                       }
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all ${
+                      className={`rounded-md border px-2 py-1 text-[11px] font-bold uppercase tracking-wide transition-all ${
                         selected
                           ? a.active
-                          : "border-[rgba(100,180,255,0.12)] bg-card text-dim hover:border-[rgba(100,180,255,0.35)] hover:text-bright"
+                          : "border-[rgba(100,180,255,0.12)] bg-card text-dim hover:text-bright"
                       } ${disabled ? "cursor-not-allowed opacity-30" : ""}`}
                     >
                       {a.icon} {a.label}
@@ -130,20 +117,14 @@ export default function StrategyPanel({
         })}
       </div>
 
-      <div className="mt-5 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-        <p className="max-w-md text-xs text-dim">
-          Your strategy is locked in when you submit. Bots will finalize theirs
-          and the round will resolve automatically.
-        </p>
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={busy}
-          className="rounded-xl bg-gold px-6 py-2.5 font-display text-sm font-bold uppercase tracking-widest text-deep shadow-glow-gold transition-all hover:brightness-110 active:scale-95 disabled:opacity-50"
-        >
-          {busy ? "Resolving…" : "Submit Strategy"}
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={onConfirm}
+        disabled={busy}
+        className="rounded-xl bg-gold px-8 py-2.5 font-display text-sm font-bold uppercase tracking-widest text-deep shadow-glow-gold transition-all hover:brightness-110 active:scale-95 disabled:opacity-50"
+      >
+        {busy ? "Resolving…" : chosen > 0 ? `Submit · ${chosen} move${chosen > 1 ? "s" : ""}` : "Submit · all skip"}
+      </button>
     </div>
   );
 }

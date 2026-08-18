@@ -48,10 +48,9 @@ export default function Lobby() {
   const router = useRouter();
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [rounds, setRounds] = useState(5);
-  const [humanName, setHumanName] = useState("You");
+  const [humans, setHumans] = useState<string[]>(["You"]);
   const [bots, setBots] = useState<BotRow[]>([
     { name: "Bot_Alpha", strategy: "buylowsellhigh" },
-    { name: "Bot_Beta", strategy: "aggressivebuyer" },
   ]);
   const [strategies, setStrategies] = useState<StrategyInfo[]>([]);
   const [creating, setCreating] = useState(false);
@@ -65,10 +64,23 @@ export default function Lobby() {
   }, []);
 
   const usedNames = useMemo(
-    () => new Set([humanName, ...bots.map((b) => b.name)]),
-    [humanName, bots]
+    () => new Set([...humans, ...bots.map((b) => b.name)]),
+    [humans, bots]
   );
-  const nextBotName = BOT_NAMES.find((n) => !usedNames.has(n)) ?? `Bot_${bots.length + 1}`;
+  const nextBotName =
+    BOT_NAMES.find((n) => !usedNames.has(n)) ?? `Bot_${bots.length + 1}`;
+
+  const addHuman = () => {
+    setHumans((prev) => [...prev, `Player ${prev.length + 1}`]);
+  };
+
+  const updateHuman = (index: number, value: string) => {
+    setHumans((prev) => prev.map((h, i) => (i === index ? value : h)));
+  };
+
+  const removeHuman = (index: number) => {
+    setHumans((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const addBot = () => {
     setBots((prev) => [
@@ -87,11 +99,18 @@ export default function Lobby() {
 
   const start = async () => {
     setError(null);
-    const name = humanName.trim() || "You";
-    if (bots.length < 1) {
-      setError("Add at least one bot opponent to start the game.");
+    const humanNames = humans.map((h, i) => h.trim() || `Player ${i + 1}`);
+    const allNames = [...humanNames, ...bots.map((b) => b.name)];
+
+    if (allNames.length < 2) {
+      setError("You need at least 2 players to start (any mix of players and bots).");
       return;
     }
+    if (new Set(allNames).size !== allNames.length) {
+      setError("Player names must be unique.");
+      return;
+    }
+
     setCreating(true);
     try {
       const game = await api.createGame({
@@ -99,7 +118,9 @@ export default function Lobby() {
         total_rounds: rounds,
         difficulty,
       });
-      await api.addPlayer(game.game_id, { username: name, role: "human" });
+      for (const name of humanNames) {
+        await api.addPlayer(game.game_id, { username: name, role: "human" });
+      }
       for (const bot of bots) {
         await api.addPlayer(game.game_id, {
           username: bot.name,
@@ -129,7 +150,7 @@ export default function Lobby() {
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-dim sm:text-base">
           Roll the dice, read the markets, and trade your way to riches. Buy low,
-          sell high, pay your taxes — and out-trade the bots for the highest
+          sell high, pay your taxes — and out-trade your rivals for the highest
           balance.
         </p>
         <div className="mt-6 flex items-center justify-center gap-3">
@@ -197,6 +218,12 @@ export default function Lobby() {
               <span>10</span>
             </div>
           </div>
+
+          <p className="mt-6 rounded-xl border border-[rgba(100,180,255,0.1)] bg-board/40 p-3 text-[11px] leading-relaxed text-dim">
+            🎮 Hot-seat multiplayer: each human player takes their own turn
+            planning trades on the same screen. Bots play their AI strategy
+            automatically.
+          </p>
         </section>
 
         {/* Players card */}
@@ -205,26 +232,61 @@ export default function Lobby() {
             👥 Players
           </span>
           <h2 className="mt-1 font-display text-xl font-bold uppercase">
-            You vs the bots
+            Who's at the table?
           </h2>
 
+          {/* Human players */}
           <div className="mt-5">
-            <label className="mb-2 block text-sm font-semibold text-bright">
-              Your name
-            </label>
-            <input
-              type="text"
-              value={humanName}
-              onChange={(e) => setHumanName(e.target.value)}
-              maxLength={50}
-              className="w-full rounded-xl border border-[rgba(100,180,255,0.2)] bg-board px-4 py-2.5 text-bright outline-none transition-colors focus:border-gold/50"
-              placeholder="You"
-            />
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-semibold text-bright">
+                Players <span className="text-dim">({humans.length})</span>
+              </p>
+              <button
+                type="button"
+                onClick={addHuman}
+                className="rounded-lg border border-gold/30 bg-gold/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-gold transition-colors hover:bg-gold/20"
+              >
+                + Add player
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {humans.map((name, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 rounded-xl border border-[rgba(100,180,255,0.08)] bg-board/50 p-2"
+                >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gold font-display text-sm font-black text-deep">
+                    {(name.trim() || `Player ${i + 1}`).slice(0, 1).toUpperCase()}
+                  </span>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => updateHuman(i, e.target.value)}
+                    maxLength={50}
+                    placeholder={`Player ${i + 1}`}
+                    className="flex-1 rounded-lg border border-[rgba(100,180,255,0.15)] bg-card px-3 py-1.5 text-sm text-bright outline-none transition-colors focus:border-gold/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeHuman(i)}
+                    disabled={humans.length <= 1}
+                    className="h-8 w-8 shrink-0 rounded-lg border border-sell/30 text-sell transition-colors hover:bg-sell/10 disabled:cursor-not-allowed disabled:opacity-30"
+                    aria-label={`Remove player ${i + 1}`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="mt-5 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-bright">Bot opponents</p>
+          {/* Bots */}
+          <div className="mt-6">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-semibold text-bright">
+                Bot opponents <span className="text-dim">({bots.length})</span>
+              </p>
               <button
                 type="button"
                 onClick={addBot}
@@ -234,53 +296,55 @@ export default function Lobby() {
               </button>
             </div>
 
-            {bots.map((bot, i) => (
-              <div
-                key={bot.name}
-                className="flex items-center gap-2 rounded-xl border border-[rgba(100,180,255,0.08)] bg-board/50 p-2"
-              >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet to-accent font-display text-sm font-bold">
-                  🤖
-                </span>
-                <span className="flex-1 truncate text-sm font-semibold">
-                  {bot.name}
-                </span>
-                <select
-                  value={bot.strategy}
-                  onChange={(e) => updateBot(i, { strategy: e.target.value })}
-                  className="rounded-lg border border-[rgba(100,180,255,0.2)] bg-card px-2 py-1.5 text-xs text-bright outline-none focus:border-gold/50"
+            <div className="space-y-2">
+              {bots.map((bot, i) => (
+                <div
+                  key={bot.name}
+                  className="flex items-center gap-2 rounded-xl border border-[rgba(100,180,255,0.08)] bg-board/50 p-2"
                 >
-                  {(strategies.length > 0 ? strategies : []).map((s) => (
-                    <option key={s.name} value={s.name}>
-                      {s.label}
-                    </option>
-                  ))}
-                  {strategies.length === 0 && (
-                    <option value="buylowsellhigh">BuyLowSellHigh</option>
-                  )}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => removeBot(i)}
-                  className="h-8 w-8 shrink-0 rounded-lg border border-sell/30 text-sell transition-colors hover:bg-sell/10"
-                  aria-label={`Remove ${bot.name}`}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet to-accent font-display text-sm font-bold">
+                    🤖
+                  </span>
+                  <span className="flex-1 truncate text-sm font-semibold">
+                    {bot.name}
+                  </span>
+                  <select
+                    value={bot.strategy}
+                    onChange={(e) => updateBot(i, { strategy: e.target.value })}
+                    className="rounded-lg border border-[rgba(100,180,255,0.2)] bg-card px-2 py-1.5 text-xs text-bright outline-none focus:border-gold/50"
+                  >
+                    {(strategies.length > 0 ? strategies : []).map((s) => (
+                      <option key={s.name} value={s.name}>
+                        {s.label}
+                      </option>
+                    ))}
+                    {strategies.length === 0 && (
+                      <option value="buylowsellhigh">BuyLowSellHigh</option>
+                    )}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => removeBot(i)}
+                    className="h-8 w-8 shrink-0 rounded-lg border border-sell/30 text-sell transition-colors hover:bg-sell/10"
+                    aria-label={`Remove ${bot.name}`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
 
-            {bots.length === 0 && (
-              <p className="text-xs italic text-dim">
-                No bots — add at least one opponent to play.
-              </p>
-            )}
+              {bots.length === 0 && (
+                <p className="text-xs italic text-dim">
+                  No bots — just you humans. Add one to fill an empty seat.
+                </p>
+              )}
+            </div>
           </div>
 
           <p className="mt-4 text-xs text-dim">
-            Each bot plays an AI strategy: BuyLowSellHigh hunts margins,
-            AggressiveBuyer hoards stock, ConservativeTrader plays it safe,
-            and MarketSniper targets value markets.
+            Bot strategies: BuyLowSellHigh hunts margins, AggressiveBuyer hoards
+            stock, ConservativeTrader plays it safe, MarketSniper targets value
+            markets.
           </p>
         </section>
       </div>

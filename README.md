@@ -22,9 +22,14 @@ This is a **front + backend** web app:
 - Compete against **AI bots** (each running a different strategy) for the highest
   final balance. The winner takes the crown.
 
-You play as the **human** player in a shared browser; bots auto-submit their
-strategies and auto-execute their trades, so the round resolves live in front of
-you.
+The game is played on a **board** (Monopoly / Ludo-King style): market spaces
+sit on the four edges, each player's token has a corner "home base", and the
+dice + action prompts live in the centre.
+
+**Multi-player (hot-seat):** any number of human players can sit at the table —
+they take turns planning on the same screen. AI bots fill the remaining seats
+and play their own strategies automatically, so the round resolves live in
+front of you.
 
 ## Project Structure
 
@@ -84,12 +89,16 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 1. Open <http://localhost:3000>.
 2. Pick a difficulty and number of rounds.
-3. Enter your name, add one or more bots (each with an AI strategy), and hit
-   **Start Game**.
-4. Each round: choose **Buy / Sell / Skip** per market and submit. Bots finalize
-   theirs automatically and the round resolves live — watch the dice, the
-   turn order and the trade feed.
-5. When the game ends you get a full results leaderboard with profit/loss.
+3. Add your **human players** (e.g. "You" + "Alice"), add AI **bots** with
+   strategies, and hit **Start Game**.
+4. Each round, in the centre of the board, the current player picks
+   **Buy / Sell / Skip** per market (tap a market space on the board to cycle,
+   or use the buttons) and submits. The next human player takes over, and bots
+   finalize automatically.
+5. Watch the round resolve live — the acting player's token moves onto the
+   market, the dice roll, and buy/sell prompts appear in the centre.
+6. When the game ends, the final standings (with profit/loss) are shown in the
+   centre of the board.
 
 ## API Endpoints
 

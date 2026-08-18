@@ -5,7 +5,7 @@ import { money, productMeta, TONE_CLASSES } from "@/lib/format";
 
 interface ResultsPanelProps {
   results: Results | null;
-  humanUsername?: string | null;
+  humanPlayers?: string[];
 }
 
 const RANK_STYLES: Record<number, string> = {
@@ -14,7 +14,7 @@ const RANK_STYLES: Record<number, string> = {
   3: "border-orange-500/40 bg-orange-500/10",
 };
 
-export default function ResultsPanel({ results, humanUsername }: ResultsPanelProps) {
+export default function ResultsPanel({ results, humanPlayers }: ResultsPanelProps) {
   if (!results) {
     return (
       <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-8 text-center shadow-card">
@@ -51,7 +51,7 @@ export default function ResultsPanel({ results, humanUsername }: ResultsPanelPro
         </h3>
         <div className="space-y-2">
           {results.standings.map((s) => {
-            const isHuman = s.username === humanUsername;
+            const isHuman = humanPlayers?.includes(s.username) ?? false;
             return (
               <div
                 key={s.username}

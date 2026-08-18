@@ -1,8 +1,10 @@
 # Frontend — Buyam-Sellam Web App
 
-Next.js (App Router) + TailwindCSS game UI for Buyam-Sellam. Dark
-cyberpunk trading aesthetic: gold hero, neon buy/sell accents, dice rolls,
-a live trade feed and an auto-resolving game loop.
+Next.js (App Router) + TailwindCSS game UI for Buyam-Sellam. Dark cyberpunk
+trading aesthetic, rendered as a **board game**: market spaces on the four
+edges of a plus board, player tokens in the corner home bases, and the dice +
+action prompts in the centre (Monopoly / Ludo-King style). Supports hot-seat
+**multi-player** (several humans on one screen) plus AI bots.
 
 ## Run
 
@@ -33,9 +35,14 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
     the **strategy** phase, one at a time;
   - executes bot trades (`POST /games/{id}/bot-action`) when a bot has a pending
     buy/sell in the **action** phase.
-- The human player (first player with `role: human`) gets the **StrategyPanel**
-  each round and a **quantity prompt** in the **ActionPanel** when the game
-  pauses on their buy/sell.
+- **Multi-player:** every player with `role: human` takes a turn. In the
+  strategy phase the hook exposes `currentPlanner` (the next human who hasn't
+  planned); in the action phase `humanActionPending` is true whenever the
+  current actor is a human with a pending buy/sell — the centre shows their
+  quantity prompt.
+- The board is rendered by **`Board.tsx`**: 4 corner "home bases" (player
+  tokens), market spaces on the 4 edges (tappable during strategy to cycle
+  Buy → Sell → Skip), and the phase controls in the centre.
 
 ## Structure
 
@@ -47,21 +54,21 @@ frontend/
 │   ├── globals.css         # Tailwind + theme background
 │   └── game/[gameId]/page.tsx
 ├── components/
-│   ├── Lobby.tsx           # create game + bots
-│   ├── GameBoard.tsx       # orchestrates the live board
-│   ├── PlayerHUD.tsx       # player cards: balance + inventory
-│   ├── MarketGrid.tsx      # market cards (price, tax, supply, entry fee)
-│   ├── StrategyPanel.tsx   # per-market Buy/Sell/Skip for the human
-│   ├── ActionPanel.tsx     # dice, turn order, quantity prompt
-│   ├── ResultsPanel.tsx    # winner banner + final standings
-│   ├── Leaderboard.tsx     # live ranking sidebar
-│   ├── GameLog.tsx         # event feed
+│   ├── Lobby.tsx           # create game: humans + bots
+│   ├── GameBoard.tsx       # orchestrates the board + phase controls
+│   ├── Board.tsx           # plus board: corners, edge markets, centre
+│   ├── PlayerToken.tsx     # player tokens (home bases / on tiles)
+│   ├── MarketTile.tsx      # a market space on the board edge
+│   ├── StrategyPanel.tsx   # compact per-market Buy/Sell/Skip (current planner)
+│   ├── ActionPanel.tsx     # dice + quantity prompt in the centre
+│   ├── ResultsPanel.tsx    # winner + standings in the centre
+│   ├── GameLog.tsx         # collapsible event feed
 │   └── Dice.tsx            # animated dice
 └── lib/
     ├── api.ts              # typed API client
     ├── types.ts            # shared game types
-    ├── format.ts           # money/product/phase helpers
-    └── useGameState.tsx    # polling hook + bot driver
+    ├── format.ts           # money/product/player-colour helpers
+    └── useGameState.tsx    # polling hook + bot driver + multi-player logic
 ```
 
 ## Scripts
