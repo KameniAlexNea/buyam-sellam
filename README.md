@@ -98,7 +98,12 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 5. Watch the round resolve live — the acting player's token moves onto the
    market, the dice roll, and buy/sell prompts appear in the centre.
 6. When the game ends, the final standings (with profit/loss) are shown in the
-   centre of the board.
+   centre of the board, with **♻️ Rematch** (same table) and **🏠 New Game**
+   buttons.
+
+Progress is saved to your browser's localStorage — if you reload or come back
+later, the lobby offers **▶ Continue** for an in-progress game (or **View
+results** after it ends).
 
 ## API Endpoints
 

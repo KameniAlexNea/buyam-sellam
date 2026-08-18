@@ -43,6 +43,11 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 - The board is rendered by **`Board.tsx`**: 4 corner "home bases" (player
   tokens), market spaces on the 4 edges (tappable during strategy to cycle
   Buy → Sell → Skip), and the phase controls in the centre.
+- **Persistence & navigation:** progress is saved to `localStorage`
+  (`lib/storage.ts`). The lobby offers **▶ Continue** for an in-progress game
+  or **View results** after it ends, and the game-over screen has
+  **♻️ Rematch** (same table) and **🏠 New Game** buttons. Raw backend hint
+  messages (e.g. "Check GET /games/{id}/results") are never shown in the UI.
 
 ## Structure
 

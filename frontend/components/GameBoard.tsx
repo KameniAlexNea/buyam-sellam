@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { api } from "@/lib/api";
-import type { MarketAction, Results } from "@/lib/types";
+import { useRouter } from "next/navigation";
+import { api, ApiError } from "@/lib/api";
+import type { Difficulty, MarketAction, Results } from "@/lib/types";
 import { useGameState } from "@/lib/useGameState";
 import { DIFFICULTY_META, phaseLabel } from "@/lib/format";
+import { buildSavedGame, saveGame } from "@/lib/storage";
 import Board from "./Board";
 import StrategyPanel from "./StrategyPanel";
 import ActionPanel from "./ActionPanel";
@@ -34,6 +36,8 @@ export default function GameBoard({ gameId }: { gameId: string }) {
   const [results, setResults] = useState<Results | null>(null);
   const [choices, setChoices] = useState<Record<number, MarketAction>>({});
   const [showLog, setShowLog] = useState(false);
+  const [navError, setNavError] = useState<string | null>(null);
+  const router = useRouter();
 
   const gameOver = game?.phase === "game_over";
 
@@ -46,6 +50,11 @@ export default function GameBoard({ gameId }: { gameId: string }) {
         .catch(() => undefined);
     }
   }, [gameOver, results, gameId]);
+
+  // Persist progress to localStorage so the game can be resumed after a reload.
+  useEffect(() => {
+    if (game) saveGame(buildSavedGame(game, results?.winner ?? null));
+  }, [game, results]);
 
   // Fresh plan selections each time a new planner takes the stage.
   useEffect(() => {
@@ -121,6 +130,39 @@ export default function GameBoard({ gameId }: { gameId: string }) {
     await submitStrategy(currentPlanner, strategy);
   };
 
+  const newGame = () => router.push("/");
+
+  // Start a fresh game with the exact same table (difficulty, rounds, players).
+  const rematch = async () => {
+    if (!game) return;
+    setNavError(null);
+    try {
+      const fresh = await api.createGame({
+        starting_balance: 50_000,
+        total_rounds: game.total_rounds,
+        difficulty: game.difficulty as Difficulty,
+      });
+      for (const p of game.players) {
+        const role = game.player_roles[p.username]?.role ?? "human";
+        await api.addPlayer(fresh.game_id, {
+          username: p.username,
+          role,
+          strategy:
+            role === "bot"
+              ? (game.player_roles[p.username]?.strategy ?? "buylowsellhigh")
+              : null,
+        });
+      }
+      const started = await api.startGame(fresh.game_id);
+      saveGame(buildSavedGame(started));
+      router.push(`/game/${started.game_id}`);
+    } catch (e) {
+      setNavError(
+        e instanceof ApiError ? e.message : "Could not start a rematch."
+      );
+    }
+  };
+
   let center: React.ReactNode;
   if (game.phase === "strategy" && canSubmitStrategy) {
     center = (
@@ -154,7 +196,17 @@ export default function GameBoard({ gameId }: { gameId: string }) {
       />
     );
   } else if (game.phase === "game_over") {
-    center = <ResultsPanel results={results} humanPlayers={humanPlayers} />;
+    center = (
+      <div className="flex w-full flex-col items-center gap-3">
+        <ResultsPanel
+          results={results}
+          humanPlayers={humanPlayers}
+          onRematch={rematch}
+          onNewGame={newGame}
+        />
+        {navError && <p className="text-xs text-sell">{navError}</p>}
+      </div>
+    );
   } else {
     center = <Waiting text={game.message || phaseLabel(game.phase)} />;
   }
@@ -189,8 +241,8 @@ export default function GameBoard({ gameId }: { gameId: string }) {
         </div>
       </header>
 
-      {/* Compact message */}
-      {game.message && (
+      {/* Compact message (hidden when a dedicated panel already shows context) */}
+      {game.message && !["action", "game_over"].includes(game.phase) && (
         <p className="animate-fade-in-up truncate rounded-lg border border-[rgba(100,180,255,0.12)] bg-board/50 px-3 py-1.5 text-center text-xs text-bright">
           {game.message}
         </p>

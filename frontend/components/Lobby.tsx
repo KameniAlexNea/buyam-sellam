@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import type { Difficulty, StrategyInfo } from "@/lib/types";
+import { buildSavedGame, clearGame, loadGame, saveGame, type SavedGame } from "@/lib/storage";
 import Dice from "./Dice";
 
 const DIFFICULTIES: { value: Difficulty; label: string; blurb: string; cash: number; active: string }[] = [
@@ -55,12 +56,18 @@ export default function Lobby() {
   const [strategies, setStrategies] = useState<StrategyInfo[]>([]);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState<SavedGame | null>(null);
 
   useEffect(() => {
     api
       .strategies()
       .then(setStrategies)
       .catch(() => setStrategies([]));
+  }, []);
+
+  // Offer to resume the last game saved to localStorage.
+  useEffect(() => {
+    setSaved(loadGame());
   }, []);
 
   const usedNames = useMemo(
@@ -128,8 +135,10 @@ export default function Lobby() {
           strategy: bot.strategy,
         });
       }
-      await api.startGame(game.game_id);
-      router.push(`/game/${game.game_id}`);
+      const started = await api.startGame(game.game_id);
+      setSaved(null);
+      saveGame(buildSavedGame(started));
+      router.push(`/game/${started.game_id}`);
     } catch (e) {
       setError(
         e instanceof ApiError ? e.message : "Failed to create the game. Is the backend running?"
@@ -157,6 +166,47 @@ export default function Lobby() {
           <Dice die1={4} die2={5} total={9} label="" size="lg" rolling />
         </div>
       </section>
+
+      {saved && (
+        <section className="animate-fade-in-up flex flex-col items-center justify-between gap-3 rounded-2xl border border-gold/30 bg-gradient-to-r from-card via-board to-card px-5 py-4 shadow-glow-gold sm:flex-row">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">
+              {saved.phase === "game_over" ? "🏆" : "🎮"}
+            </span>
+            <div>
+              <p className="font-display text-sm font-bold uppercase tracking-widest">
+                {saved.phase === "game_over" ? "Last game finished" : "Game in progress"}
+              </p>
+              <p className="text-xs text-dim">
+                {saved.phase === "game_over"
+                  ? saved.winner
+                    ? `Winner: ${saved.winner}`
+                    : `Round ${saved.round_number}/${saved.total_rounds}`
+                  : `Round ${saved.round_number}/${saved.total_rounds} · ${saved.difficulty}`}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => router.push(`/game/${saved.gameId}`)}
+              className="rounded-xl bg-gold px-5 py-2 font-display text-sm font-bold uppercase tracking-widest text-deep transition-all hover:brightness-110 active:scale-95"
+            >
+              {saved.phase === "game_over" ? "View results" : "▶ Continue"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                clearGame();
+                setSaved(null);
+              }}
+              className="rounded-xl border border-[rgba(100,180,255,0.2)] px-4 py-2 text-xs font-semibold uppercase tracking-widest text-dim transition-colors hover:text-gold"
+            >
+              Dismiss
+            </button>
+          </div>
+        </section>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr]">
         {/* Setup card */}

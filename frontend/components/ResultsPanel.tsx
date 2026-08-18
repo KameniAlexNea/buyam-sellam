@@ -6,6 +6,8 @@ import { money, productMeta, TONE_CLASSES } from "@/lib/format";
 interface ResultsPanelProps {
   results: Results | null;
   humanPlayers?: string[];
+  onRematch?: () => void;
+  onNewGame?: () => void;
 }
 
 const RANK_STYLES: Record<number, string> = {
@@ -14,11 +16,17 @@ const RANK_STYLES: Record<number, string> = {
   3: "border-orange-500/40 bg-orange-500/10",
 };
 
-export default function ResultsPanel({ results, humanPlayers }: ResultsPanelProps) {
+export default function ResultsPanel({
+  results,
+  humanPlayers,
+  onRematch,
+  onNewGame,
+}: ResultsPanelProps) {
   if (!results) {
     return (
       <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-8 text-center shadow-card">
         <p className="text-dim">Fetching final results…</p>
+        {(onRematch || onNewGame) && <NavButtons onRematch={onRematch} onNewGame={onNewGame} />}
       </div>
     );
   }
@@ -106,6 +114,40 @@ export default function ResultsPanel({ results, humanPlayers }: ResultsPanelProp
           })}
         </div>
       </div>
+
+      <NavButtons onRematch={onRematch} onNewGame={onNewGame} />
+    </div>
+  );
+}
+
+function NavButtons({
+  onRematch,
+  onNewGame,
+}: {
+  onRematch?: () => void;
+  onNewGame?: () => void;
+}) {
+  if (!onRematch && !onNewGame) return null;
+  return (
+    <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+      {onRematch && (
+        <button
+          type="button"
+          onClick={onRematch}
+          className="rounded-xl bg-gold px-6 py-2.5 font-display text-sm font-bold uppercase tracking-widest text-deep shadow-glow-gold transition-all hover:brightness-110 active:scale-95"
+        >
+          ♻️ Rematch
+        </button>
+      )}
+      {onNewGame && (
+        <button
+          type="button"
+          onClick={onNewGame}
+          className="rounded-xl border border-[rgba(100,180,255,0.25)] bg-card/60 px-6 py-2.5 font-display text-sm font-bold uppercase tracking-widest text-bright transition-all hover:border-gold/40 hover:text-gold active:scale-95"
+        >
+          🏠 New Game
+        </button>
+      )}
     </div>
   );
 }

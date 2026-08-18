@@ -713,9 +713,7 @@ def _end_current_round(game_id: str):
 
     if table.current_round >= table.total_rounds:
         meta["phase"] = GamePhase.GAME_OVER.value
-        meta["message"] = (
-            "Game over! Check GET /games/{id}/results for final standings."
-        )
+        meta["message"] = "Game over! Final standings are ready."
     else:
         _start_new_round(game_id)
 
