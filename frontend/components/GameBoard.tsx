@@ -10,6 +10,7 @@ import { DIFFICULTY_META, phaseLabel } from "@/lib/format";
 import { buildSavedGame, saveGame } from "@/lib/storage";
 import Board from "./Board";
 import TurnTracker from "./TurnTracker";
+import HelpLink from "./HelpLink";
 import StrategyPanel from "./StrategyPanel";
 import ActionPanel from "./ActionPanel";
 import ResultsPanel from "./ResultsPanel";
@@ -232,6 +233,7 @@ export default function GameBoard({ gameId }: { gameId: string }) {
           <span className="rounded-lg border border-[rgba(100,180,255,0.2)] bg-card/60 px-3 py-1.5 font-display text-xs font-bold uppercase tracking-widest text-cyan">
             {phaseLabel(game.phase)}
           </span>
+          <HelpLink />
           <button
             type="button"
             onClick={() => setShowLog((v) => !v)}

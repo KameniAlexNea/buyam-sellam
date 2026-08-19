@@ -6,6 +6,7 @@ import { api, ApiError } from "@/lib/api";
 import type { Difficulty, StrategyInfo } from "@/lib/types";
 import { buildSavedGame, clearGame, loadGame, saveGame, type SavedGame } from "@/lib/storage";
 import Dice from "./Dice";
+import HelpLink from "./HelpLink";
 
 const DIFFICULTIES: { value: Difficulty; label: string; blurb: string; cash: number; active: string }[] = [
   {
@@ -182,6 +183,14 @@ export default function Lobby() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-6">
+      {/* Top bar */}
+      <div className="flex items-center justify-between">
+        <span className="font-display text-[11px] font-bold uppercase tracking-[0.4em] text-gold/70">
+          🎲 Marketplace Trading Game
+        </span>
+        <HelpLink />
+      </div>
+
       {/* Hero */}
       <section className="relative overflow-hidden rounded-3xl border-2 border-gold/20 bg-gradient-to-br from-card via-board to-deep px-6 py-12 text-center shadow-card">
         <span className="font-display text-[11px] font-bold uppercase tracking-[0.4em] text-gold">
