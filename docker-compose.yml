@@ -1,0 +1,55 @@
+# Buyam-Sellam — frontend + backend
+#
+#   docker compose up --build
+#
+# Frontend:  http://localhost:3000
+# Backend:   http://localhost:8000  (API docs at /docs)
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: buyam-sellam-backend
+    container_name: buyam-sellam-backend
+    # Backend listens on port 8000 inside the container; publish it as 50180
+    # on the host so the browser reaches it at http://localhost:50180.
+    ports:
+      - "50180:8000"
+    volumes:
+      # Persist game state files across container restarts.
+      - game-state:/app/backend/out
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health', timeout=2).status==200 else 1)",
+        ]
+      interval: 60s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        # Inlined into the client bundle at build time. Because the browser
+        # reaches the API through the host-published port, localhost:50180 works
+        # for local Compose deployments.
+        NEXT_PUBLIC_API_URL: http://localhost:50180
+    image: buyam-sellam-frontend
+    container_name: buyam-sellam-frontend
+    ports:
+      - "50130:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  game-state:

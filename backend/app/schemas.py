@@ -1,7 +1,5 @@
 """Pydantic schemas for the Buyam-Sellam API."""
 
-from __future__ import annotations
-
 from enum import Enum
 from typing import Any, Optional
 from pydantic import BaseModel, Field
@@ -48,6 +46,14 @@ class CreateGameRequest(BaseModel):
 
 class AddPlayerRequest(BaseModel):
     username: str = Field(..., min_length=1, max_length=50)
+    role: str = Field(
+        "human",
+        description="'human' for a live player, 'bot' for an AI-controlled player",
+    )
+    strategy: Optional[str] = Field(
+        None,
+        description="Bot strategy name (required when role='bot', e.g. 'buylowsellhigh')",
+    )
 
 
 class SubmitStrategyRequest(BaseModel):
@@ -70,7 +76,23 @@ class SubmitStrategyRequest(BaseModel):
     }
 
 
+class BotStrategyRequest(BaseModel):
+    username: str = Field(..., description="The bot player's username")
+    strategy_name: str = Field(
+        ...,
+        description="Bot strategy key (e.g. 'buylowsellhigh', 'aggressivebuyer')",
+    )
+
+
 class ExecuteActionRequest(BaseModel):
+    quantity: Optional[int] = Field(None, ge=1)
+
+
+class BotActionRequest(BaseModel):
+    strategy_name: Optional[str] = Field(
+        None,
+        description="Bot strategy used to choose the quantity automatically",
+    )
     quantity: Optional[int] = Field(None, ge=1)
 
 
@@ -91,6 +113,8 @@ class MarketInfoResponse(BaseModel):
     product: str
     market_fixed_price: float
     market_supply: int
+    tax_rate: float = 0.0
+    sell_entry_fee: int = 0
 
 
 class GameStateResponse(BaseModel):
@@ -100,6 +124,10 @@ class GameStateResponse(BaseModel):
     total_rounds: int
     difficulty: str = "medium"
     players: list[PlayerInfoResponse] = []
+    player_roles: dict[str, dict] = Field(
+        default_factory=dict,
+        description="username → {role: 'human'|'bot', strategy: str|None}",
+    )
     markets: list[MarketInfoResponse] = []
     turn_order: Optional[list[dict]] = None
     current_player: Optional[str] = None
@@ -140,3 +168,20 @@ class FinalResultsResponse(BaseModel):
     winner: str
     standings: list[dict]
     starting_balance: float
+
+
+class StrategyInfoResponse(BaseModel):
+    name: str
+    label: str
+    description: str
+
+
+class HistoryEntry(BaseModel):
+    timestamp: str
+    action: str
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
+class HistoryResponse(BaseModel):
+    game_id: str
+    history: list[HistoryEntry] = []

@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from ksell.strategy import ALL_STRATEGIES
 from app.routes import router
 
 app = FastAPI(
@@ -23,6 +24,15 @@ app.add_middleware(
 )
 
 app.include_router(router)
+
+
+@app.get("/strategies", tags=["strategies"])
+def list_strategies():
+    """List available AI bot strategies for the frontend."""
+    return [
+        {"name": name, "label": cls.label, "description": cls.description}
+        for name, cls in sorted(ALL_STRATEGIES.items())
+    ]
 
 
 @app.exception_handler(Exception)

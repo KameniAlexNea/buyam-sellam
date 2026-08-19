@@ -98,6 +98,14 @@ def append_history(
     path.write_text(json.dumps(history, indent=2, default=str))
 
 
+def load_history(game_id: str) -> List[Dict[str, Any]]:
+    """Load the full event history for a game (empty list if not found)."""
+    path = _history_path(game_id)
+    if not path.exists():
+        return []
+    return json.loads(path.read_text())
+
+
 def list_games() -> List[Dict[str, Any]]:
     """Return a summary of all games found in the out/ directory."""
     if not OUT_DIR.exists():

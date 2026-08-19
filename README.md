@@ -1,122 +1,172 @@
-# buyam-sellam
+# Buyam-Sellam
 
-A business simulation / marketplace game with a FastAPI REST API.
+A marketplace trading **game** — roll the dice, read the markets, buy low, sell
+high, pay your taxes, and out-trade your rivals.
+
+This is a **front + backend** web app:
+
+| Part | Stack | Folder |
+|------|-------|--------|
+| Backend | FastAPI (Python) | [`backend/`](./backend) |
+| Frontend | Next.js + TailwindCSS (TypeScript) | [`frontend/`](./frontend) |
 
 ## Game Overview
 
-Buyam-Sellam is a marketplace simulation game where players:
-- Roll dice (2d6) to determine buy/sell conditions
-- Trade products in dynamic markets with taxes and entry fees
-- Manage inventory and balance across multiple rounds
-- Compete with other players for the highest final balance
+- Roll **2d6** every round — your dice total sets your buying/selling price
+  (dice × 100 FCFA).
+- Each active market trades **one product** at a fixed price, with a supply,
+  a tax rate and an entry fee.
+- **Buy** when your dice price is high enough; **sell** when the market will pay
+  you a good price. There's an order book, market auto-buys, pending market
+  purchases and even forced sales to cover taxes.
+- Compete against **AI bots** (each running a different strategy) for the highest
+  final balance. The winner takes the crown.
+
+The game is played on a **board** (Monopoly / Ludo-King style): market spaces
+sit on the four edges, each player's token has a corner "home base", and the
+dice + action prompts live in the centre.
+
+**Multi-player (hot-seat):** any number of human players can sit at the table —
+they take turns planning on the same screen. AI bots fill the remaining seats
+and play their own strategies automatically, so the round resolves live in
+front of you.
 
 ## Project Structure
 
 ```
 buyam-sellam/
-├── game.py                  # CLI game (reference implementation)
-├── pyproject.toml           # Dependencies & scripts
-├── app/                     # FastAPI web service
-│   ├── main.py              # App entry point
-│   ├── routes.py            # All API endpoints
-│   ├── schemas.py           # Pydantic request/response models
-│   └── state_manager.py     # File-based state persistence
-├── ksell/                   # Core game logic (unchanged)
-│   ├── model/               # Table, Player, MarketBoard, Dice, ProductModel
-│   ├── pojo/                # User, Product, Market data classes
-│   ├── simulate/            # Automated simulation
-│   └── utils/               # Random utilities
-└── out/                     # Game state files (one folder per game)
+├── backend/            # FastAPI game server
+│   ├── app/            #   main.py, routes.py, schemas.py, state_manager.py
+│   ├── ksell/          #   core game logic (Table, Player, MarketBoard, ...)
+│   └── out/            #   per-game state files (gitignored)
+├── frontend/           # Next.js + Tailwind web UI
+│   ├── app/            #   App Router pages (lobby + game)
+│   ├── components/     #   game UI components
+│   └── lib/            #   API client, types, game-state hook (bot driver)
+├── pyproject.toml      # Backend deps (uv) + scripts
+├── tox.ini             # format / test
+└── .gitignore
 ```
 
-## Installation
+## Quick Start
+
+### 1. Backend
 
 ```bash
-uv sync
+uv sync                      # install Python deps (fastapi, uvicorn, ...)
+uv run run-server            # start API on http://localhost:8000
 ```
 
-## Running the API Server
+Or manually:
 
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+cd backend
+uvicorn app.main:app --reload --port 8000
 ```
 
-The API docs are available at `http://localhost:8000/docs`.
+- API docs: <http://localhost:8000/docs>
+- Health check: <http://localhost:8000/health>
+
+> Note: game state is held in-memory on the server. Restarting the backend
+> clears active games (their `backend/out/*` state files remain on disk).
+
+### 2. Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev                  # open http://localhost:3000
+```
+
+The frontend talks to the backend at `http://localhost:8000` by default. To
+point it elsewhere, create `frontend/.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+### 3. Play
+
+1. Open <http://localhost:3000>.
+2. Pick a difficulty and number of rounds.
+3. Add your **human players** (e.g. "You" + "Alice"), add AI **bots** with
+   strategies, and hit **Start Game**.
+4. Each round, in the centre of the board, the current player picks
+   **Buy / Sell / Skip** per market (tap a market space on the board to cycle,
+   or use the buttons) and submits. The next human player takes over, and bots
+   finalize automatically.
+5. Watch the round resolve live — the acting player's token moves onto the
+   market, the dice roll, and buy/sell prompts appear in the centre.
+6. When the game ends, the final standings (with profit/loss) are shown in the
+   centre of the board, with **♻️ Rematch** (same table) and **🏠 New Game**
+   buttons.
+
+Progress is saved to your browser's localStorage — if you reload or come back
+later, the lobby offers **▶ Continue** for an in-progress game (or **View
+results** after it ends).
+
+## Run with Docker
+
+```bash
+docker compose up --build
+```
+
+- Frontend: <http://localhost:3000>
+- Backend API: <http://localhost:8000> (docs at `/docs`)
+- Game state is kept in the named volume `game-state`, so games survive
+  container restarts.
+
+The frontend talks to the backend at `http://localhost:8000`, inlined into the
+client bundle at build time via the `NEXT_PUBLIC_API_URL` build arg (see
+`docker-compose.yml`) — change it there if you host the two services
+separately.
+
+`backend/Dockerfile` resolves dependencies straight from `pyproject.toml` +
+`uv.lock`, so there's no separate requirements file to keep in sync.
 
 ## API Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/health` | Health check |
-| `POST` | `/games` | Create a new game |
-| `GET` | `/games` | List all games |
+| `GET` | `/strategies` | List available AI bot strategies |
+| `POST` | `/games` | Create a game |
+| `GET` | `/games` | List games |
 | `GET` | `/games/{id}` | Get game state |
 | `DELETE` | `/games/{id}` | Delete a game |
-| `POST` | `/games/{id}/players` | Add a player |
+| `POST` | `/games/{id}/players` | Add a player (`role: human\|bot`, optional `strategy`) |
 | `POST` | `/games/{id}/start` | Start the game |
-| `POST` | `/games/{id}/strategy` | Submit a player's strategy |
-| `POST` | `/games/{id}/action` | Execute buy/sell with quantity |
-| `GET` | `/games/{id}/results` | Get final results (game over) |
-
-## Quick Start (curl)
-
-```bash
-# Create a game
-GAME=$(curl -s -X POST http://localhost:8000/games \
-  -H 'Content-Type: application/json' \
-  -d '{"starting_balance": 50000, "total_rounds": 3}')
-ID=$(echo $GAME | python3 -c "import sys,json; print(json.load(sys.stdin)['game_id'])")
-
-# Add players
-curl -s -X POST http://localhost:8000/games/$ID/players \
-  -H 'Content-Type: application/json' -d '{"username": "alice"}'
-curl -s -X POST http://localhost:8000/games/$ID/players \
-  -H 'Content-Type: application/json' -d '{"username": "bob"}'
-
-# Start the game
-curl -s -X POST http://localhost:8000/games/$ID/start
-
-# Submit strategies (each player)
-curl -s -X POST http://localhost:8000/games/$ID/strategy \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"alice","strategy":[{"market_index":1,"action":"buy"}]}'
-curl -s -X POST http://localhost:8000/games/$ID/strategy \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"bob","strategy":[{"market_index":1,"action":"sell"}]}'
-
-# Execute actions (when can_buy or can_sell is true)
-curl -s -X POST http://localhost:8000/games/$ID/action \
-  -H 'Content-Type: application/json' -d '{"quantity": 10}'
-
-# Get results (when phase is game_over)
-curl -s http://localhost:8000/games/$ID/results
-```
+| `POST` | `/games/{id}/strategy` | Submit a human player's strategy |
+| `POST` | `/games/{id}/bot-strategy` | Compute & submit a bot's strategy |
+| `POST` | `/games/{id}/action` | Execute the current action (human, with quantity) |
+| `POST` | `/games/{id}/bot-action` | Execute the current action (bot, auto quantity) |
+| `GET` | `/games/{id}/results` | Final results (game over) |
+| `GET` | `/games/{id}/history` | Event history feed |
 
 ## Game Flow
 
 ```
-CREATED → SETUP → ROUND_START → STRATEGY → TURN_ORDER → ACTION → END_ROUND
-                                                                    ↓
-                                                    (back to ROUND_START or GAME_OVER)
+CREATED → SETUP → STRATEGY → ACTION → (rounds...) → GAME_OVER
 ```
 
-Each phase transition writes the full state to `out/{game_id}/state.json` and appends to `out/{game_id}/history.json`.
+- **STRATEGY** — every player picks buy/sell/skip per active market.
+- **ACTION** — players act in dice-roll turn order; buys/sells happen at the
+  dice-derived price. The game pauses when it's your turn and you can buy/sell.
+- **GAME_OVER** — final standings with winner and profit/loss.
 
-## Game Mechanics
+## Bots
 
-### Dice Rolling
-- Two dice (1-6 each) determine market conditions
-- Total range: 2-12
-- Higher rolls = better market conditions
+Built-in AI strategies live in `backend/ksell/strategy.py`:
 
-### Markets
-- Each market has a location with min/max quantity range
-- Tax rate applied to total quantity
-- Players can pass through or sell in markets
+- `buylowsellhigh` — classic arbitrage
+- `aggressivebuyer` — hoards stock at max quantity
+- `conservativetrader` — only trades on very favorable conditions
+- `marketsniper` — targets high-supply, low-price markets
+- `random` — baseline
 
-### Player Economy
-- Fortune: Player's wealth
-- Cards: Collectible game cards
-- Subscribers: Social network followers
-- Competitions: Number of games played
-- Stars: Achievement rating
+## Development
+
+```bash
+tox -e format     # format + lint with ruff (backend)
+tox -e test       # run pytest suite (when added)
+```

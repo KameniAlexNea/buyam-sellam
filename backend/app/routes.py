@@ -9,6 +9,7 @@ The Table object is kept in-memory per game.  After every state transition
 the full state is flushed to out/{game_id}/state.json.
 """
 
+import random
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, HTTPException
@@ -19,11 +20,14 @@ from ksell.model.player import Player
 from ksell.model.product import ProductModel
 from ksell.model.table import Table
 from ksell.pojo.user import User
+from ksell.strategy import ALL_STRATEGIES, get_strategy
 from ksell.utils.random_utils import uniform_int_range
 
 from app.schemas import (
     Action,
     ActionResultResponse,
+    BotActionRequest,
+    BotStrategyRequest,
     CreateGameRequest,
     ExecuteActionRequest,
     GameListEntry,
@@ -40,6 +44,7 @@ from app.state_manager import (
     create_game_dir,
     delete_game,
     list_games,
+    load_history,
     new_game_id,
     save_state,
 )
@@ -88,6 +93,8 @@ def _market_info(idx: int, m: MarketBoard) -> MarketInfoResponse:
         product=m.location.product,
         market_fixed_price=m.market_fixed_price,
         market_supply=m.market_supply,
+        tax_rate=m.location.tax_rate,
+        sell_entry_fee=m.sell_entry_fee,
     )
 
 
@@ -103,6 +110,7 @@ def _game_state(game_id: str) -> GameStateResponse:
         total_rounds=table.total_rounds,
         difficulty=meta.get("difficulty", "medium"),
         players=[_player_info(p) for p in table.players],
+        player_roles=meta.get("player_roles", {}),
         markets=[_market_info(i, m) for i, m in enumerate(markets, 1)],
         turn_order=meta.get("turn_order"),
         current_player=meta.get("current_player"),
@@ -129,6 +137,7 @@ def _flush(game_id: str) -> None:
         "total_rounds": table.total_rounds,
         "difficulty": meta.get("difficulty", "medium"),
         "players": [_player_info(p).model_dump() for p in table.players],
+        "player_roles": meta.get("player_roles", {}),
         "markets": [
             _market_info(i, m).model_dump()
             for i, m in enumerate(meta.get("active_markets", []), 1)
@@ -186,6 +195,7 @@ def create_game(req: CreateGameRequest):
         "difficulty": req.difficulty.value,
         "strategies_submitted": [],
         "player_strategies": {},
+        "player_roles": {},
         "turn_order": [],
         "current_player": None,
         "current_market_index": None,
@@ -245,6 +255,18 @@ def add_player(game_id: str, req: AddPlayerRequest):
     player = Player(user=user)
     player.balance = _meta[game_id]["starting_balance"]
     table.add_player(player)
+
+    # Record whether this player is a human or an AI bot (and its strategy).
+    # Bots without a strategy get a random one from the backend registry, so
+    # the strategy list is always the single source of truth (no hardcoding).
+    role = req.role if req.role in {"human", "bot"} else "human"
+    strategy = req.strategy
+    if role == "bot" and not strategy:
+        strategy = random.choice(list(ALL_STRATEGIES.keys()))
+    _meta[game_id]["player_roles"][req.username] = {
+        "role": role,
+        "strategy": strategy,
+    }
 
     if _meta[game_id]["phase"] == GamePhase.CREATED.value:
         _meta[game_id]["phase"] = GamePhase.SETUP.value
@@ -311,22 +333,20 @@ def _start_new_round(game_id: str):
     _flush(game_id)
 
 
-@router.post("/{game_id}/strategy", summary="Submit a player's strategy")
-def submit_strategy(game_id: str, req: SubmitStrategyRequest):
-    _check_phase(game_id, GamePhase.STRATEGY)
+def _validate_strategy(
+    game_id: str, username: str, entries: List[dict]
+) -> List[tuple]:
+    """Validate a strategy payload and return parsed (market_index, action) tuples."""
     table = _tables[game_id]
     meta = _meta[game_id]
     markets = meta["active_markets"]
 
-    player = table.get_player(req.username)
+    player = table.get_player(username)
     if not player:
-        raise HTTPException(
-            status_code=404, detail=f"Player '{req.username}' not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Player '{username}' not found")
 
-    # Parse & validate strategy
     parsed: List[tuple] = []
-    for entry in req.strategy:
+    for entry in entries:
         mi = entry["market_index"]
         action = entry["action"]
         if not (1 <= mi <= len(markets)):
@@ -345,10 +365,19 @@ def submit_strategy(game_id: str, req: SubmitStrategyRequest):
                     detail=f"You don't have {market.location.product} to sell in market {mi}",
                 )
         parsed.append((mi, action))
+    return parsed
 
-    meta["player_strategies"][req.username] = parsed
-    if req.username not in meta["strategies_submitted"]:
-        meta["strategies_submitted"].append(req.username)
+
+def _apply_submitted_strategy(
+    game_id: str, username: str, parsed: List[tuple]
+) -> None:
+    """Record a strategy and advance to the ACTION phase once all players submitted."""
+    table = _tables[game_id]
+    meta = _meta[game_id]
+
+    meta["player_strategies"][username] = parsed
+    if username not in meta["strategies_submitted"]:
+        meta["strategies_submitted"].append(username)
 
     # All players submitted → determine turn order → transition to ACTION
     if len(meta["strategies_submitted"]) == len(table.players):
@@ -371,14 +400,55 @@ def submit_strategy(game_id: str, req: SubmitStrategyRequest):
             if p.username not in meta["strategies_submitted"]
         ]
         meta["message"] = (
-            f"Strategy for '{req.username}' recorded. Waiting for: {', '.join(remaining)}"
+            f"Strategy for '{username}' recorded. Waiting for: {', '.join(remaining)}"
         )
+
+
+@router.post("/{game_id}/strategy", summary="Submit a player's strategy")
+def submit_strategy(game_id: str, req: SubmitStrategyRequest):
+    _check_phase(game_id, GamePhase.STRATEGY)
+    parsed = _validate_strategy(game_id, req.username, req.strategy)
+    _apply_submitted_strategy(game_id, req.username, parsed)
 
     _flush(game_id)
     append_history(
         game_id,
         "strategy_submitted",
         {"username": req.username, "strategy": [[m, a] for m, a in parsed]},
+    )
+    return _game_state(game_id)
+
+
+@router.post("/{game_id}/bot-strategy", summary="Compute & submit a bot's strategy")
+def submit_bot_strategy(game_id: str, req: BotStrategyRequest):
+    _check_phase(game_id, GamePhase.STRATEGY)
+    table = _tables[game_id]
+    meta = _meta[game_id]
+    markets = meta["active_markets"]
+
+    if table.get_player(req.username) is None:
+        raise HTTPException(status_code=404, detail=f"Player '{req.username}' not found")
+
+    # Build the same dict shape the AI strategies expect
+    market_dicts = [_market_info(i, m).model_dump() for i, m in enumerate(markets, 1)]
+    player_dicts = [_player_info(p).model_dump() for p in table.players]
+
+    strategy = get_strategy(req.strategy_name)
+    choices = strategy.choose_strategy(market_dicts, player_dicts, req.username)
+    entries = [{"market_index": mi, "action": act} for mi, act in choices]
+
+    parsed = _validate_strategy(game_id, req.username, entries)
+    _apply_submitted_strategy(game_id, req.username, parsed)
+
+    _flush(game_id)
+    append_history(
+        game_id,
+        "bot_strategy_submitted",
+        {
+            "username": req.username,
+            "strategy": req.strategy_name,
+            "choices": [[m, a] for m, a in parsed],
+        },
     )
     return _game_state(game_id)
 
@@ -500,17 +570,13 @@ def _execute_next_action(game_id: str):
     _end_current_round(game_id)
 
 
-@router.post(
-    "/{game_id}/action", summary="Execute the current action (buy/sell with quantity)"
-)
-def execute_action(game_id: str, req: ExecuteActionRequest):
-    _check_phase(game_id, GamePhase.ACTION)
+def _execute_action(
+    game_id: str, quantity: int, actor: str = "human"
+) -> ActionResultResponse:
+    """Execute the current pending action (buy or sell) with the given quantity."""
     table = _tables[game_id]
     meta = _meta[game_id]
     markets = meta["active_markets"]
-
-    if not req.quantity or req.quantity < 1:
-        raise HTTPException(status_code=400, detail="Quantity must be >= 1")
 
     player = table.get_player(meta["current_player"])
     if not player:
@@ -530,22 +596,22 @@ def execute_action(game_id: str, req: ExecuteActionRequest):
 
     if strategy == Action.BUY.value:
         max_aff = meta["max_affordable"]
-        if req.quantity > max_aff:
+        if quantity > max_aff:
             raise HTTPException(
                 status_code=400,
-                detail=f"Quantity {req.quantity} exceeds max affordable ({max_aff})",
+                detail=f"Quantity {quantity} exceeds max affordable ({max_aff})",
             )
-        result = table.execute_buy_at_market_price(player, market, req.quantity)
+        result = table.execute_buy_at_market_price(player, market, quantity)
         action_label = "buy"
 
     elif strategy == Action.SELL.value:
         max_sell = meta["seller_qty"]
-        if req.quantity > max_sell:
+        if quantity > max_sell:
             raise HTTPException(
                 status_code=400,
-                detail=f"Quantity {req.quantity} exceeds inventory ({max_sell})",
+                detail=f"Quantity {quantity} exceeds inventory ({max_sell})",
             )
-        result = table.execute_market_auto_buy(player, market, req.quantity, dice_price)
+        result = table.execute_market_auto_buy(player, market, quantity, dice_price)
         action_label = "sell"
 
     else:
@@ -575,7 +641,8 @@ def execute_action(game_id: str, req: ExecuteActionRequest):
         {
             "player": player.username,
             "market": market_num,
-            "quantity": req.quantity,
+            "quantity": quantity,
+            "actor": actor,
             "result": result,
         },
     )
@@ -605,6 +672,44 @@ def execute_action(game_id: str, req: ExecuteActionRequest):
     )
 
 
+@router.post(
+    "/{game_id}/action", summary="Execute the current action (buy/sell with quantity)"
+)
+def execute_action(game_id: str, req: ExecuteActionRequest):
+    _check_phase(game_id, GamePhase.ACTION)
+    if not req.quantity or req.quantity < 1:
+        raise HTTPException(status_code=400, detail="Quantity must be >= 1")
+    return _execute_action(game_id, req.quantity, actor="human")
+
+
+@router.post(
+    "/{game_id}/bot-action",
+    summary="Execute the current action for an AI bot (auto quantity)",
+)
+def execute_bot_action(game_id: str, req: BotActionRequest):
+    _check_phase(game_id, GamePhase.ACTION)
+    meta = _meta[game_id]
+
+    if not (meta.get("can_buy") or meta.get("can_sell")):
+        raise HTTPException(
+            status_code=400,
+            detail="No pending action to execute for the current player",
+        )
+
+    quantity = req.quantity
+    if quantity is None:
+        # Let the strategy choose the quantity automatically
+        strategy_name = req.strategy_name or "buylowsellhigh"
+        strategy = get_strategy(strategy_name)
+        state = _game_state(game_id).model_dump()
+        if meta.get("can_buy"):
+            quantity = strategy.choose_buy_quantity(state)
+        else:
+            quantity = strategy.choose_sell_quantity(state)
+
+    return _execute_action(game_id, quantity, actor="bot")
+
+
 def _end_current_round(game_id: str):
     """End the current round and either start a new one or end the game."""
     table = _tables[game_id]
@@ -615,9 +720,7 @@ def _end_current_round(game_id: str):
 
     if table.current_round >= table.total_rounds:
         meta["phase"] = GamePhase.GAME_OVER.value
-        meta["message"] = (
-            "Game over! Check GET /games/{id}/results for final standings."
-        )
+        meta["message"] = "Game over! Final standings are ready."
     else:
         _start_new_round(game_id)
 
@@ -667,3 +770,15 @@ def get_results(game_id: str):
         "standings": standings,
         "starting_balance": starting_balance,
     }
+
+
+# ---------------------------------------------------------------------------
+# History
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{game_id}/history", summary="Get the game's event history")
+def get_history(game_id: str):
+    if game_id not in _tables:
+        raise HTTPException(status_code=404, detail="Game not found")
+    return {"game_id": game_id, "history": load_history(game_id)}

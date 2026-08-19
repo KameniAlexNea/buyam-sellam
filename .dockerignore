@@ -1,0 +1,23 @@
+# VCS
+.git
+.gitignore
+
+# Python / uv
+.venv
+.tox
+.ruff_cache
+__pycache__
+*.py[codz]
+*.egg-info
+backend/out
+
+# Node / Next.js
+frontend/node_modules
+frontend/.next
+frontend/out
+frontend/.env*.local
+frontend/tsconfig.tsbuildinfo
+
+# OS / editor
+.DS_Store
+*.log
