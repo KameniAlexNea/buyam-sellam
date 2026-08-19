@@ -95,6 +95,7 @@ def _market_info(idx: int, m: MarketBoard) -> MarketInfoResponse:
         market_supply=m.market_supply,
         tax_rate=m.location.tax_rate,
         sell_entry_fee=m.sell_entry_fee,
+        price_history=m.price_history,
     )
 
 

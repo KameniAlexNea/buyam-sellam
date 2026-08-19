@@ -115,6 +115,10 @@ class MarketInfoResponse(BaseModel):
     market_supply: int
     tax_rate: float = 0.0
     sell_entry_fee: int = 0
+    price_history: list[int] = Field(
+        default_factory=list,
+        description="Price per active round (drives the sparkline charts)",
+    )
 
 
 class GameStateResponse(BaseModel):

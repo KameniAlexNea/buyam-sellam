@@ -42,6 +42,7 @@ export interface MarketInfo {
   market_supply: number;
   tax_rate: number;
   sell_entry_fee: number;
+  price_history: number[];
 }
 
 export interface TurnOrderEntry {

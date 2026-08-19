@@ -3,6 +3,7 @@
 import type { MarketAction, MarketInfo } from "@/lib/types";
 import { moneyShort, productMeta, TONE_CLASSES } from "@/lib/format";
 import PlayerToken from "./PlayerToken";
+import Sparkline from "./Sparkline";
 
 interface MarketTileProps {
   market?: MarketInfo;
@@ -64,6 +65,20 @@ export default function MarketTile({
   const meta = productMeta(market.product);
   const horizontal = orientation === "horizontal";
 
+  // Trend vs the previous round, derived from the market's price history.
+  const hist = market.price_history ?? [];
+  const last = hist.length > 0 ? hist[hist.length - 1] : market.market_fixed_price;
+  const prev = hist.length > 1 ? hist[hist.length - 2] : last;
+  const pct = prev ? ((last - prev) / prev) * 100 : 0;
+  const trendUp = pct > 0.1;
+  const trendDown = pct < -0.1;
+  const trendStroke = trendUp ? "#00e68a" : trendDown ? "#ff4d6a" : "#7a89aa";
+  const trendLabel = trendUp
+    ? `▲ ${Math.abs(pct).toFixed(1)}%`
+    : trendDown
+    ? `▼ ${Math.abs(pct).toFixed(1)}%`
+    : "—";
+
   return (
     <button
       type="button"
@@ -78,8 +93,8 @@ export default function MarketTile({
       } ${dimmed ? "opacity-45" : ""}`}
       style={
         horizontal
-          ? { minHeight: "4.75rem" }
-          : { minWidth: "4.75rem", minHeight: "6rem" }
+          ? { minHeight: "5.5rem" }
+          : { minWidth: "4.75rem", minHeight: "7rem" }
       }
     >
       <div
@@ -99,6 +114,21 @@ export default function MarketTile({
           <p className={`font-display text-sm font-bold ${active ? "text-gold" : "text-cyan"}`}>
             {moneyShort(market.market_fixed_price)}
           </p>
+          <div className="mt-0.5 flex items-center gap-1.5">
+            <Sparkline
+              data={hist}
+              width={horizontal ? 56 : 44}
+              height={16}
+              stroke={trendStroke}
+            />
+            <span
+              className={`text-[9px] font-bold ${
+                trendUp ? "text-buy" : trendDown ? "text-sell" : "text-dim"
+              }`}
+            >
+              {trendLabel}
+            </span>
+          </div>
         </div>
         {token && (
           <PlayerToken
