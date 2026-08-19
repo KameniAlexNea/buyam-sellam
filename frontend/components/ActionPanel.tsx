@@ -77,6 +77,11 @@ export default function ActionPanel({
               )}{" "}
               · max <span className="font-bold">{maxQty}</span>
             </p>
+            <p className={`mt-1 text-[10px] ${game.can_buy ? "text-buy" : "text-sell"}`}>
+              🎲 Rolled {game.dice_total} → dice price {money(game.dice_price ?? 0)}{" "}
+              {game.can_buy ? "≥" : "≤"} market {money(market?.market_fixed_price ?? 0)} →{" "}
+              {game.can_buy ? "buy succeeds" : "sell succeeds"}
+            </p>
           </div>
 
           <div className="flex items-center gap-2">

@@ -78,6 +78,13 @@ export default function MarketTile({
     : trendDown
     ? `▼ ${Math.abs(pct).toFixed(1)}%`
     : "—";
+  const priceCls = active
+    ? "text-gold"
+    : trendUp
+    ? "text-buy"
+    : trendDown
+    ? "text-sell"
+    : "text-cyan";
 
   return (
     <button
@@ -93,8 +100,8 @@ export default function MarketTile({
       } ${dimmed ? "opacity-45" : ""}`}
       style={
         horizontal
-          ? { minHeight: "5.5rem" }
-          : { minWidth: "4.75rem", minHeight: "7rem" }
+          ? { minHeight: "6.25rem" }
+          : { minWidth: "4.75rem", minHeight: "8rem" }
       }
     >
       <div
@@ -111,7 +118,7 @@ export default function MarketTile({
             {market.product}
           </p>
           <p className="text-[10px] text-dim">{market.name}</p>
-          <p className={`font-display text-sm font-bold ${active ? "text-gold" : "text-cyan"}`}>
+          <p className={`font-display text-sm font-bold ${priceCls}`}>
             {moneyShort(market.market_fixed_price)}
           </p>
           <div className="mt-0.5 flex items-center gap-1.5">
@@ -129,6 +136,10 @@ export default function MarketTile({
               {trendLabel}
             </span>
           </div>
+          <p className="mt-0.5 text-[9px] text-dim">
+            {market.market_supply}u · tax {(market.tax_rate * 100).toFixed(0)}% · fee{" "}
+            {moneyShort(market.sell_entry_fee)}
+          </p>
         </div>
         {token && (
           <PlayerToken
@@ -147,6 +158,12 @@ export default function MarketTile({
           }`}
         >
           {BADGE_META[badge].label}
+        </span>
+      )}
+
+      {onClick && (
+        <span className="pointer-events-none absolute bottom-1 right-1.5 rounded bg-board/90 px-1 py-0.5 text-[8px] uppercase tracking-wider text-dim opacity-0 transition-opacity group-hover:opacity-100">
+          ⤾ tap to cycle
         </span>
       )}
     </button>
