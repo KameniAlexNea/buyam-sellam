@@ -71,11 +71,26 @@ export default function Board({
     }
     const isHuman = humanPlayers.includes(player.username);
     const isActive = player.username === currentPlayer || player.username === currentPlanner;
+    const statusLabel =
+      phase === "strategy" && player.username === currentPlanner
+        ? "PLANNING"
+        : phase === "action" && player.username === currentPlayer
+        ? "TRADING"
+        : null;
     return (
       <div
         key={key}
-        className="flex items-center justify-center rounded-xl border border-[rgba(100,180,255,0.1)] bg-card p-2"
+        className={`relative flex items-center justify-center rounded-xl border p-2 transition-all duration-300 ${
+          isActive
+            ? "border-gold/60 bg-card shadow-glow-gold"
+            : "border-[rgba(100,180,255,0.1)] bg-card/70"
+        }`}
       >
+        {statusLabel && (
+          <span className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gold px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-wider text-deep shadow-glow-gold">
+            {statusLabel}
+          </span>
+        )}
         <PlayerToken
           username={player.username}
           balance={player.balance}

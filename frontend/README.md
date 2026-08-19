@@ -42,7 +42,13 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
   quantity prompt.
 - The board is rendered by **`Board.tsx`**: 4 corner "home bases" (player
   tokens), market spaces on the 4 edges (tappable during strategy to cycle
-  Buy → Sell → Skip), and the phase controls in the centre.
+  Buy → Sell → Skip), and the phase controls in the centre. The active player's
+  corner gets a **PLANNING / TRADING** badge and their token moves onto the
+  active market space during the action phase.
+- **`TurnTracker.tsx`** is a ribbon above the board that always makes clear
+  whose turn it is: the current player's name in their color, plus a status chip
+  per player (✓ planned / ◌ planning / … waiting in strategy; turn order with
+  dice in action).
 - **Persistence & navigation:** progress is saved to `localStorage`
   (`lib/storage.ts`). The lobby offers **▶ Continue** for an in-progress game
   or **View results** after it ends, and the game-over screen has

@@ -9,6 +9,7 @@ import { useGameState } from "@/lib/useGameState";
 import { DIFFICULTY_META, phaseLabel } from "@/lib/format";
 import { buildSavedGame, saveGame } from "@/lib/storage";
 import Board from "./Board";
+import TurnTracker from "./TurnTracker";
 import StrategyPanel from "./StrategyPanel";
 import ActionPanel from "./ActionPanel";
 import ResultsPanel from "./ResultsPanel";
@@ -241,8 +242,17 @@ export default function GameBoard({ gameId }: { gameId: string }) {
         </div>
       </header>
 
-      {/* Compact message (hidden when a dedicated panel already shows context) */}
-      {game.message && !["action", "game_over"].includes(game.phase) && (
+      {/* Whose turn is it — shown on the strategy & action phases */}
+      {["strategy", "action"].includes(game.phase) && (
+        <TurnTracker
+          game={game}
+          currentPlanner={currentPlanner}
+          humanPlayers={humanPlayers}
+        />
+      )}
+
+      {/* Compact message (transitions only) */}
+      {game.message && !["strategy", "action", "game_over"].includes(game.phase) && (
         <p className="animate-fade-in-up truncate rounded-lg border border-[rgba(100,180,255,0.12)] bg-board/50 px-3 py-1.5 text-center text-xs text-bright">
           {game.message}
         </p>
