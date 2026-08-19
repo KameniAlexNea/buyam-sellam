@@ -69,6 +69,8 @@ export interface GameState {
   can_sell: boolean | null;
   max_affordable: number | null;
   seller_qty: number | null;
+  action_failed: boolean | null;
+  action_fail_reason: string | null;
   message: string;
 }
 

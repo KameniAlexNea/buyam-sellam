@@ -123,6 +123,8 @@ def _game_state(game_id: str) -> GameStateResponse:
         can_sell=meta.get("can_sell"),
         max_affordable=meta.get("max_affordable"),
         seller_qty=meta.get("seller_qty"),
+        action_failed=meta.get("action_failed"),
+        action_fail_reason=meta.get("action_fail_reason"),
         message=meta.get("message", ""),
     )
 
@@ -155,6 +157,8 @@ def _flush(game_id: str) -> None:
         "can_sell": meta.get("can_sell"),
         "max_affordable": meta.get("max_affordable"),
         "seller_qty": meta.get("seller_qty"),
+        "action_failed": meta.get("action_failed"),
+        "action_fail_reason": meta.get("action_fail_reason"),
         "message": meta.get("message", ""),
         "starting_balance": meta.get("starting_balance", 0),
     }
@@ -327,6 +331,8 @@ def _start_new_round(game_id: str):
     meta["active_markets"] = markets
     meta["strategies_submitted"] = []
     meta["player_strategies"] = {}
+    meta["action_failed"] = None
+    meta["action_fail_reason"] = None
     meta["message"] = (
         f"Round {table.current_round} started. {num_markets} markets active. Submit strategies."
     )
@@ -459,6 +465,11 @@ def submit_bot_strategy(game_id: str, req: BotStrategyRequest):
 # ---------------------------------------------------------------------------
 
 
+def _is_human(meta: Dict[str, Any], username: str) -> bool:
+    """True if the given player is a human (hot-seat) rather than a bot."""
+    return meta.get("player_roles", {}).get(username, {}).get("role", "human") != "bot"
+
+
 def _execute_next_action(game_id: str):
     """Execute the next action in the action queue (dice roll + condition check)."""
     table = _tables[game_id]
@@ -492,16 +503,16 @@ def _execute_next_action(game_id: str):
         # Clear stale flags from previous action
         meta["can_buy"] = None
         meta["can_sell"] = None
+        meta["action_failed"] = None
+        meta["action_fail_reason"] = None
 
         if strategy == Action.SKIP.value:
-            # Skip — just advance
+            # Skip — mark it done. The while loop re-checks this player (they
+            # may have more strategies, one per market) and only advances the
+            # per-player action_index once ALL their actions are done.
             player_actions_done.setdefault(player.username, 0)
             player_actions_done[player.username] += 1
             meta["player_actions_done"] = player_actions_done
-            meta["action_index"] += 1
-            if meta["action_index"] < len(turn_order_list):
-                next_p, _ = turn_order_list[meta["action_index"]]
-                meta["current_player"] = next_p.username
             continue
 
         # Roll dice for this market
@@ -514,16 +525,21 @@ def _execute_next_action(game_id: str):
             result = table.process_market_action_buy(player, market, dice_total)
             if not result.get("can_buy"):
                 meta["can_buy"] = None
-                meta["message"] = (
-                    f"{player.username}: Buy condition not met (dice {dice_price} < market {market.market_fixed_price}). Skipping."
+                reason = result.get("error") or (
+                    f"{player.username}: Buy not executed — dice {dice_price} FCFA < market {market.market_fixed_price} FCFA"
                 )
+                if _is_human(meta, player.username):
+                    # Humans get to SEE the failed trade and confirm it.
+                    meta["current_player"] = player.username
+                    meta["current_market_index"] = market_num
+                    meta["action_failed"] = True
+                    meta["action_fail_reason"] = reason
+                    meta["message"] = reason
+                    return
+                meta["message"] = f"{player.username}: {reason} Skipping."
                 player_actions_done.setdefault(player.username, 0)
                 player_actions_done[player.username] += 1
                 meta["player_actions_done"] = player_actions_done
-                meta["action_index"] += 1
-                if meta["action_index"] < len(turn_order_list):
-                    next_p, _ = turn_order_list[meta["action_index"]]
-                    meta["current_player"] = next_p.username
                 continue
             meta["can_buy"] = True
             meta["max_affordable"] = result["max_affordable"]
@@ -536,29 +552,37 @@ def _execute_next_action(game_id: str):
             # Pay entry fee
             fee_result = table.pay_sell_entry_fee(player, market)
             if not fee_result["success"]:
-                meta["message"] = f"{player.username}: {fee_result['error']} Skipping."
+                reason = fee_result["error"]
+                if _is_human(meta, player.username):
+                    meta["current_player"] = player.username
+                    meta["current_market_index"] = market_num
+                    meta["action_failed"] = True
+                    meta["action_fail_reason"] = reason
+                    meta["message"] = reason
+                    return
+                meta["message"] = f"{player.username}: {reason} Skipping."
                 player_actions_done.setdefault(player.username, 0)
                 player_actions_done[player.username] += 1
                 meta["player_actions_done"] = player_actions_done
-                meta["action_index"] += 1
-                if meta["action_index"] < len(turn_order_list):
-                    next_p, _ = turn_order_list[meta["action_index"]]
-                    meta["current_player"] = next_p.username
                 continue
 
             result = table.process_market_action_sell(player, market, dice_total)
             if not result.get("can_sell"):
                 meta["can_sell"] = None
-                meta["message"] = (
-                    f"{player.username}: Sell condition not met (dice {dice_price} > market {market.market_fixed_price}). Skipping."
+                reason = result.get("error") or (
+                    f"{player.username}: Sell not executed — dice {dice_price} FCFA > market {market.market_fixed_price} FCFA"
                 )
+                if _is_human(meta, player.username):
+                    meta["current_player"] = player.username
+                    meta["current_market_index"] = market_num
+                    meta["action_failed"] = True
+                    meta["action_fail_reason"] = reason
+                    meta["message"] = reason
+                    return
+                meta["message"] = f"{player.username}: {reason} Skipping."
                 player_actions_done.setdefault(player.username, 0)
                 player_actions_done[player.username] += 1
                 meta["player_actions_done"] = player_actions_done
-                meta["action_index"] += 1
-                if meta["action_index"] < len(turn_order_list):
-                    next_p, _ = turn_order_list[meta["action_index"]]
-                    meta["current_player"] = next_p.username
                 continue
             meta["can_sell"] = True
             meta["seller_qty"] = result["seller_qty"]
@@ -586,6 +610,50 @@ def _execute_action(
     market_num = meta["current_market_index"]
     market = markets[market_num - 1]
     dice_price = meta["dice_price"]
+
+    # A failed planned action that the human acknowledged (Continue): there is
+    # no trade to execute — record the skip and advance the action queue.
+    if meta.get("action_failed"):
+        reason = meta.get("action_fail_reason") or "Trade could not be executed"
+        meta["action_failed"] = None
+        meta["action_fail_reason"] = None
+        player_actions_done = meta.get("player_actions_done", {})
+        player_actions_done.setdefault(player.username, 0)
+        player_actions_done[player.username] += 1
+        meta["player_actions_done"] = player_actions_done
+        meta["can_buy"] = None
+        meta["can_sell"] = None
+
+        _flush(game_id)
+        append_history(
+            game_id,
+            "action_failed",
+            {
+                "player": player.username,
+                "market": market_num,
+                "reason": reason,
+                "actor": actor,
+            },
+        )
+
+        _execute_next_action(game_id)
+        _flush(game_id)
+        state = _game_state(game_id)
+        round_ended = state.phase != GamePhase.ACTION.value
+        return ActionResultResponse(
+            success=True,
+            action="skip",
+            details={"reason": reason},
+            next_state=state,
+            message=(
+                f"{player.username}: trade failed — {reason}. Round ended."
+                if round_ended
+                else f"{player.username}: trade failed — {reason}. Next: {state.current_player}"
+            ),
+        )
+
+    if quantity is None or quantity < 1:
+        raise HTTPException(status_code=400, detail="Quantity must be >= 1")
 
     # Determine if this is a buy or sell from the strategy
     strategies = meta["player_strategies"].get(player.username, [])
@@ -618,7 +686,10 @@ def _execute_action(
     else:
         raise HTTPException(status_code=400, detail="No pending action to execute")
 
-    # Advance action index
+    # Mark this action done. A player can have several strategies (one per
+    # active market), so the per-player action_index must NOT advance here —
+    # _execute_next_action moves to the player's next action, then to the next
+    # player, and only ends the round once everyone's actions are done.
     player_actions_done.setdefault(player.username, 0)
     player_actions_done[player.username] += 1
     meta["player_actions_done"] = player_actions_done
@@ -626,14 +697,6 @@ def _execute_action(
     # Clear flags so next poll doesn't see stale values
     meta["can_buy"] = None
     meta["can_sell"] = None
-
-    turn_order_list = [
-        (table.get_player(t["username"]), t["dice_total"]) for t in meta["turn_order"]
-    ]
-    meta["action_index"] += 1
-    if meta["action_index"] < len(turn_order_list):
-        next_p, _ = turn_order_list[meta["action_index"]]
-        meta["current_player"] = next_p.username
 
     _flush(game_id)
     append_history(
@@ -648,28 +711,22 @@ def _execute_action(
         },
     )
 
-    # Check if all actions are done
-    all_done = meta["action_index"] >= len(turn_order_list)
-    if all_done:
-        _end_current_round(game_id)
-        return ActionResultResponse(
-            success=True,
-            action=action_label,
-            details=result,
-            next_state=_game_state(game_id),
-            message=f"{player.username} {action_label} complete. Round ended.",
-        )
-
-    # Execute next action automatically
+    # Move to the player's next action, the next player, or end the round.
     _execute_next_action(game_id)
 
     _flush(game_id)
+    state = _game_state(game_id)
+    round_ended = state.phase != GamePhase.ACTION.value
     return ActionResultResponse(
         success=True,
         action=action_label,
         details=result,
-        next_state=_game_state(game_id),
-        message=f"{player.username} {action_label} complete. Next: {meta.get('current_player', '—')}",
+        next_state=state,
+        message=(
+            f"{player.username} {action_label} complete. Round ended."
+            if round_ended
+            else f"{player.username} {action_label} complete. Next: {state.current_player}"
+        ),
     )
 
 
@@ -678,8 +735,6 @@ def _execute_action(
 )
 def execute_action(game_id: str, req: ExecuteActionRequest):
     _check_phase(game_id, GamePhase.ACTION)
-    if not req.quantity or req.quantity < 1:
-        raise HTTPException(status_code=400, detail="Quantity must be >= 1")
     return _execute_action(game_id, req.quantity, actor="human")
 
 

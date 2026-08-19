@@ -85,7 +85,9 @@ class BotStrategyRequest(BaseModel):
 
 
 class ExecuteActionRequest(BaseModel):
-    quantity: Optional[int] = Field(None, ge=1)
+    # quantity=0 is used as an "acknowledge" for a failed planned action
+    # (the human confirms the failure before the action queue advances).
+    quantity: Optional[int] = Field(None, ge=0)
 
 
 class BotActionRequest(BaseModel):
@@ -143,6 +145,8 @@ class GameStateResponse(BaseModel):
     can_sell: Optional[bool] = None
     max_affordable: Optional[int] = None
     seller_qty: Optional[int] = None
+    action_failed: Optional[bool] = None
+    action_fail_reason: Optional[str] = None
     message: str = ""
 
 

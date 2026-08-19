@@ -121,6 +121,35 @@ export default function ActionPanel({
             </button>
           </div>
         </div>
+      ) : isHumanTurn && game.action_failed ? (
+        <div className="flex w-full max-w-md flex-col items-center gap-3 rounded-2xl border border-sell/40 bg-sell/5 p-4">
+          <div className="flex items-center gap-3">
+            {meta && (
+              <span className={`flex h-12 w-12 items-center justify-center rounded-xl border text-2xl ${TONE_CLASSES[meta.tone]}`}>
+                {meta.icon}
+              </span>
+            )}
+            <div className="text-left">
+              <p className="text-sm font-bold text-sell">
+                ❌ Trade didn't go through
+              </p>
+              <p className="mt-1 text-[11px] text-bright">
+                {game.action_fail_reason}
+              </p>
+            </div>
+          </div>
+          <p className="text-[10px] text-dim">
+            🎲 Rolled {game.dice_total} → dice price {money(game.dice_price ?? 0)}
+          </p>
+          <button
+            type="button"
+            onClick={() => onExecute(0)}
+            disabled={busy}
+            className="rounded-xl bg-dim px-6 py-2 font-display text-xs font-bold uppercase tracking-widest text-white transition-all hover:brightness-110 active:scale-95 disabled:opacity-50"
+          >
+            {busy ? "…" : "Continue"}
+          </button>
+        </div>
       ) : (
         <div className="flex items-center gap-3 rounded-2xl border border-[rgba(100,180,255,0.1)] bg-board/50 px-6 py-4">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
