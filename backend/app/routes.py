@@ -9,6 +9,7 @@ The Table object is kept in-memory per game.  After every state transition
 the full state is flushed to out/{game_id}/state.json.
 """
 
+import random
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, HTTPException
@@ -19,7 +20,7 @@ from ksell.model.player import Player
 from ksell.model.product import ProductModel
 from ksell.model.table import Table
 from ksell.pojo.user import User
-from ksell.strategy import get_strategy
+from ksell.strategy import ALL_STRATEGIES, get_strategy
 from ksell.utils.random_utils import uniform_int_range
 
 from app.schemas import (
@@ -255,10 +256,16 @@ def add_player(game_id: str, req: AddPlayerRequest):
     player.balance = _meta[game_id]["starting_balance"]
     table.add_player(player)
 
-    # Record whether this player is a human or an AI bot (and its strategy)
+    # Record whether this player is a human or an AI bot (and its strategy).
+    # Bots without a strategy get a random one from the backend registry, so
+    # the strategy list is always the single source of truth (no hardcoding).
+    role = req.role if req.role in {"human", "bot"} else "human"
+    strategy = req.strategy
+    if role == "bot" and not strategy:
+        strategy = random.choice(list(ALL_STRATEGIES.keys()))
     _meta[game_id]["player_roles"][req.username] = {
-        "role": req.role if req.role in {"human", "bot"} else "human",
-        "strategy": req.strategy,
+        "role": role,
+        "strategy": strategy,
     }
 
     if _meta[game_id]["phase"] == GamePhase.CREATED.value:

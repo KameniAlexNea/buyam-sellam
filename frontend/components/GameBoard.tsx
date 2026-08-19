@@ -150,7 +150,7 @@ export default function GameBoard({ gameId }: { gameId: string }) {
           role,
           strategy:
             role === "bot"
-              ? (game.player_roles[p.username]?.strategy ?? "buylowsellhigh")
+              ? (game.player_roles[p.username]?.strategy ?? null)
               : null,
         });
       }

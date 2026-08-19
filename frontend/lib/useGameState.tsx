@@ -39,7 +39,9 @@ function isBot(game: GameState, username: string): boolean {
 }
 
 function botStrategy(game: GameState, username: string): string {
-  return game.player_roles[username]?.strategy ?? "buylowsellhigh";
+  // Bots always get a strategy from the backend at creation, so this is
+  // effectively always set; empty string means "not ready yet".
+  return game.player_roles[username]?.strategy ?? "";
 }
 
 /**
@@ -81,9 +83,15 @@ export function useGameState(gameId: string): UseGameState {
           (p) => isBot(g, p.username) && !g.strategies_submitted.includes(p.username)
         );
         if (pending) {
+          const strat = botStrategy(g, pending.username);
+          if (!strat) {
+            // Bot has no strategy assigned yet — wait for the backend.
+            await refresh();
+            return;
+          }
           await api.submitBotStrategy(g.game_id, {
             username: pending.username,
-            strategy_name: botStrategy(g, pending.username),
+            strategy_name: strat,
           });
           await refresh();
           return;
@@ -93,8 +101,13 @@ export function useGameState(gameId: string): UseGameState {
       if (g.phase === "action") {
         const cur = g.current_player;
         if (cur && isBot(g, cur) && (g.can_buy || g.can_sell)) {
+          const strat = botStrategy(g, cur);
+          if (!strat) {
+            await refresh();
+            return;
+          }
           await api.executeBotAction(g.game_id, {
-            strategy_name: botStrategy(g, cur),
+            strategy_name: strat,
           });
           await refresh();
           return;

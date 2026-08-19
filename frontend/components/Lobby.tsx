@@ -51,18 +51,48 @@ export default function Lobby() {
   const [rounds, setRounds] = useState(5);
   const [humans, setHumans] = useState<string[]>(["You"]);
   const [bots, setBots] = useState<BotRow[]>([
-    { name: "Bot_Alpha", strategy: "buylowsellhigh" },
+    { name: "Bot_Alpha", strategy: "" },
   ]);
   const [strategies, setStrategies] = useState<StrategyInfo[]>([]);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SavedGame | null>(null);
 
+  // Load the strategy list, retrying until the backend answers so the
+  // dropdown never gets stuck showing only one option.
   useEffect(() => {
-    api
-      .strategies()
-      .then(setStrategies)
-      .catch(() => setStrategies([]));
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const load = async () => {
+      try {
+        const list = await api.strategies();
+        if (cancelled) return;
+        if (list.length > 0) {
+          setStrategies(list);
+          // Assign a strategy straight from the API to any bot that doesn't
+          // have one yet (the list is the single source of truth).
+          setBots((prev) =>
+            prev.map((b) =>
+              b.strategy
+                ? b
+                : {
+                    ...b,
+                    strategy: list[Math.floor(Math.random() * list.length)].name,
+                  }
+            )
+          );
+        } else {
+          timer = setTimeout(load, 2500);
+        }
+      } catch {
+        if (!cancelled) timer = setTimeout(load, 2500);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, []);
 
   // Offer to resume the last game saved to localStorage.
@@ -90,10 +120,9 @@ export default function Lobby() {
   };
 
   const addBot = () => {
-    setBots((prev) => [
-      ...prev,
-      { name: nextBotName, strategy: "buylowsellhigh" },
-    ]);
+    if (strategies.length === 0) return; // strategies not loaded yet
+    const pick = strategies[Math.floor(Math.random() * strategies.length)];
+    setBots((prev) => [...prev, { name: nextBotName, strategy: pick.name }]);
   };
 
   const updateBot = (index: number, patch: Partial<BotRow>) => {
@@ -115,6 +144,10 @@ export default function Lobby() {
     }
     if (new Set(allNames).size !== allNames.length) {
       setError("Player names must be unique.");
+      return;
+    }
+    if (strategies.length === 0) {
+      setError("Bot strategies are still loading — wait a moment and try again.");
       return;
     }
 
@@ -340,7 +373,8 @@ export default function Lobby() {
               <button
                 type="button"
                 onClick={addBot}
-                className="rounded-lg border border-gold/30 bg-gold/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-gold transition-colors hover:bg-gold/20"
+                disabled={strategies.length === 0}
+                className="rounded-lg border border-gold/30 bg-gold/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-gold transition-colors hover:bg-gold/20 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 + Add bot
               </button>
@@ -363,13 +397,14 @@ export default function Lobby() {
                     onChange={(e) => updateBot(i, { strategy: e.target.value })}
                     className="rounded-lg border border-[rgba(100,180,255,0.2)] bg-card px-2 py-1.5 text-xs text-bright outline-none focus:border-gold/50"
                   >
-                    {(strategies.length > 0 ? strategies : []).map((s) => (
-                      <option key={s.name} value={s.name}>
-                        {s.label}
-                      </option>
-                    ))}
-                    {strategies.length === 0 && (
-                      <option value="buylowsellhigh">BuyLowSellHigh</option>
+                    {strategies.length === 0 ? (
+                      <option value="">Loading strategies…</option>
+                    ) : (
+                      strategies.map((s) => (
+                        <option key={s.name} value={s.name}>
+                          {s.label}
+                        </option>
+                      ))
                     )}
                   </select>
                   <button
