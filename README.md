@@ -105,6 +105,25 @@ Progress is saved to your browser's localStorage — if you reload or come back
 later, the lobby offers **▶ Continue** for an in-progress game (or **View
 results** after it ends).
 
+## Run with Docker
+
+```bash
+docker compose up --build
+```
+
+- Frontend: <http://localhost:3000>
+- Backend API: <http://localhost:8000> (docs at `/docs`)
+- Game state is kept in the named volume `game-state`, so games survive
+  container restarts.
+
+The frontend talks to the backend at `http://localhost:8000`, inlined into the
+client bundle at build time via the `NEXT_PUBLIC_API_URL` build arg (see
+`docker-compose.yml`) — change it there if you host the two services
+separately.
+
+`backend/Dockerfile` resolves dependencies straight from `pyproject.toml` +
+`uv.lock`, so there's no separate requirements file to keep in sync.
+
 ## API Endpoints
 
 | Method | Path | Description |
