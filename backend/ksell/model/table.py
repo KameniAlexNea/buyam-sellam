@@ -315,6 +315,12 @@ class Table:
             if market.last_purchase_price is not None:
                 market.market_fixed_price = market.last_purchase_price
                 market.last_purchase_price = None
+            # Price dynamics for the new round: react to last round's trades,
+            # add random volatility, and snapshot the price for the charts.
+            market.apply_net_flow()
+            market.apply_volatility()
+            market.record_price()
+            market.net_flow = 0
             market.sell_orders = []
             market.completed_trades = []
             market.total_qty = market.remaining_qty
@@ -521,6 +527,7 @@ class Table:
             buy_qty = min(remaining, market.market_supply)
             cost = buy_qty * market_price
             market.market_supply -= buy_qty
+            market.net_flow -= buy_qty  # demand pulls supply
             market.remaining_qty = market.market_supply
             remaining -= buy_qty
             total_cost += cost
@@ -683,6 +690,7 @@ class Table:
 
         # Market absorbs the products (adds to supply for next round)
         market.market_supply += quantity
+        market.net_flow += quantity  # market absorbs stock
         market.remaining_qty = market.market_supply
 
         # Record trade

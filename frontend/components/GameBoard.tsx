@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import type { Difficulty, MarketAction, Results } from "@/lib/types";
 import { useGameState } from "@/lib/useGameState";
 import { DIFFICULTY_META, phaseLabel } from "@/lib/format";
-import { buildSavedGame, saveGame } from "@/lib/storage";
+import { buildSavedGame, clearGame, saveGame } from "@/lib/storage";
 import Board from "./Board";
 import TurnTracker from "./TurnTracker";
-import HelpLink from "./HelpLink";
-import StrategyPanel from "./StrategyPanel";
+import GameHeader from "./GameHeader";
 import ActionPanel from "./ActionPanel";
+import BotTurnPanel from "./BotTurnPanel";
+import StrategyDashboard from "./StrategyDashboard";
+import ActionDashboard from "./ActionDashboard";
 import ResultsPanel from "./ResultsPanel";
 import GameLog from "./GameLog";
 
@@ -24,6 +25,7 @@ export default function GameBoard({ gameId }: { gameId: string }) {
     history,
     loading,
     error,
+    notFound,
     humanPlayers,
     isHuman,
     currentPlanner,
@@ -31,6 +33,7 @@ export default function GameBoard({ gameId }: { gameId: string }) {
     canSubmitStrategy,
     botsStrategizing,
     refresh,
+    refreshHistory,
     submitStrategy,
     executeAction,
   } = useGameState(gameId);
@@ -42,6 +45,12 @@ export default function GameBoard({ gameId }: { gameId: string }) {
   const router = useRouter();
 
   const gameOver = game?.phase === "game_over";
+
+  // The game no longer exists on the server (backend restart wiped the
+  // in-memory state). Drop the stale save and let the player start fresh.
+  useEffect(() => {
+    if (notFound) clearGame();
+  }, [notFound]);
 
   // Fetch final results once the game ends.
   useEffect(() => {
@@ -62,6 +71,36 @@ export default function GameBoard({ gameId }: { gameId: string }) {
   useEffect(() => {
     setChoices({});
   }, [game?.round_number, currentPlanner]);
+
+  // Fetch the event log only while it's actually open (and re-fetch when the
+  // round or phase advances so it stays fresh). No background polling.
+  useEffect(() => {
+    if (showLog) refreshHistory();
+  }, [showLog, game?.round_number, game?.phase, refreshHistory]);
+
+  if (notFound) {
+    return (
+      <Shell>
+        <div className="mx-auto max-w-md rounded-2xl border border-dim/30 bg-card p-8 text-center shadow-card">
+          <p className="text-3xl">🕳️</p>
+          <h2 className="mt-3 font-display text-lg font-bold uppercase">
+            This game is gone
+          </h2>
+          <p className="mt-2 text-sm text-dim">
+            The game server was restarted and the game state was lost. Start a
+            new game from the lobby.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push("/")}
+            className="mt-5 rounded-xl bg-gold px-6 py-2 font-display text-sm font-bold uppercase tracking-widest text-deep"
+          >
+            ← Back to Lobby
+          </button>
+        </div>
+      </Shell>
+    );
+  }
 
   if (loading && !game) {
     return (
@@ -140,7 +179,6 @@ export default function GameBoard({ gameId }: { gameId: string }) {
     setNavError(null);
     try {
       const fresh = await api.createGame({
-        starting_balance: 50_000,
         total_rounds: game.total_rounds,
         difficulty: game.difficulty as Difficulty,
       });
@@ -166,36 +204,16 @@ export default function GameBoard({ gameId }: { gameId: string }) {
   };
 
   let center: React.ReactNode;
-  if (game.phase === "strategy" && canSubmitStrategy) {
-    center = (
-      <StrategyPanel
-        markets={game.markets}
-        planner={currentPlanner ?? ""}
-        plannerPlayer={plannerPlayer}
-        choices={choices}
-        onChoice={onChoice}
-        busy={busy}
-        onConfirm={confirmStrategy}
-      />
-    );
-  } else if (game.phase === "strategy") {
-    center = (
-      <Waiting
-        text={
-          botsStrategizing
-            ? "Waiting for the bots to plan…"
-            : "All plans are in — resolving the round…"
-        }
-      />
-    );
-  } else if (game.phase === "action") {
-    center = (
+  if (game.phase === "action") {
+    center = isHumanTurn ? (
       <ActionPanel
         game={game}
         isHumanTurn={isHumanTurn}
         busy={busy}
         onExecute={executeAction}
       />
+    ) : (
+      <BotTurnPanel game={game} />
     );
   } else if (game.phase === "game_over") {
     center = (
@@ -215,25 +233,20 @@ export default function GameBoard({ gameId }: { gameId: string }) {
 
   return (
     <Shell>
-      {/* Header */}
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <Link
-          href="/"
-          className="rounded-lg border border-[rgba(100,180,255,0.2)] bg-card/60 px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-dim transition-colors hover:border-gold/40 hover:text-gold"
-        >
-          ← Lobby
-        </Link>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-lg bg-card/60 px-3 py-1.5 font-display text-xs font-bold uppercase tracking-widest text-gold border border-gold/20">
-            Round {game.round_number} / {game.total_rounds}
-          </span>
-          <span className={`rounded-lg border px-3 py-1.5 font-display text-xs font-bold uppercase tracking-widest ${diff.tone}`}>
-            {diff.label}
-          </span>
-          <span className="rounded-lg border border-[rgba(100,180,255,0.2)] bg-card/60 px-3 py-1.5 font-display text-xs font-bold uppercase tracking-widest text-cyan">
-            {phaseLabel(game.phase)}
-          </span>
-          <HelpLink />
+      {/* Game-style header: back left, title center, badges + controls right */}
+      <GameHeader
+        subtitle={phaseLabel(game.phase)}
+        badges={
+          <>
+            <span className="rounded-lg bg-card/60 px-3 py-1.5 font-display text-xs font-bold uppercase tracking-widest text-gold border border-gold/20">
+              Round {game.round_number} / {game.total_rounds}
+            </span>
+            <span className={`rounded-lg border px-3 py-1.5 font-display text-xs font-bold uppercase tracking-widest ${diff.tone}`}>
+              {diff.label}
+            </span>
+          </>
+        }
+        actions={
           <button
             type="button"
             onClick={() => setShowLog((v) => !v)}
@@ -241,11 +254,15 @@ export default function GameBoard({ gameId }: { gameId: string }) {
           >
             {showLog ? "Hide" : "📜"} Log
           </button>
-        </div>
-      </header>
+        }
+      />
 
-      {/* Whose turn is it — shown on the strategy & action phases */}
-      {["strategy", "action"].includes(game.phase) && (
+      {/* Whose turn is it — the action phase shows dice turn order; the
+          strategy phase already shows player/planning status in the dashboard's
+          right "Players" panel, so the ribbon would only duplicate it. During
+          a bot's action turn the board is shown instead (no Players panel), so
+          the turn-order ribbon stays there. */}
+      {game.phase === "action" && !isHumanTurn && (
         <TurnTracker
           game={game}
           currentPlanner={currentPlanner}
@@ -260,20 +277,39 @@ export default function GameBoard({ gameId }: { gameId: string }) {
         </p>
       )}
 
-      {/* The board */}
-      <Board
-        players={game.players}
-        playerRoles={game.player_roles}
-        markets={game.markets}
-        phase={game.phase}
-        humanPlayers={humanPlayers}
-        currentPlayer={game.current_player}
-        currentPlanner={currentPlanner}
-        currentMarketIndex={game.current_market_index}
-        choices={choices}
-        onMarketTap={onMarketTap}
-        center={center}
-      />
+      {/* Strategy phase = full planning dashboard (3 columns) */}
+      {game.phase === "strategy" ? (
+        <StrategyDashboard
+          game={game}
+          planner={currentPlanner ?? ""}
+          plannerPlayer={plannerPlayer}
+          humanPlayers={humanPlayers}
+          choices={choices}
+          onChoice={onChoice}
+          busy={busy}
+          canSubmit={canSubmitStrategy}
+          onConfirm={confirmStrategy}
+        />
+      ) : game.phase === "action" && isHumanTurn ? (
+        <ActionDashboard game={game} busy={busy} onExecute={executeAction} />
+      ) : game.phase === "game_over" ? (
+        // Final results get the full width — no board decorations around them.
+        <div className="mx-auto w-full max-w-2xl">{center}</div>
+      ) : (
+        <Board
+          players={game.players}
+          playerRoles={game.player_roles}
+          markets={game.markets}
+          phase={game.phase}
+          humanPlayers={humanPlayers}
+          currentPlayer={game.current_player}
+          currentPlanner={currentPlanner}
+          currentMarketIndex={game.current_market_index}
+          choices={choices}
+          onMarketTap={onMarketTap}
+          center={center}
+        />
+      )}
 
       {/* Optional event log */}
       {showLog && (

@@ -36,8 +36,9 @@ class Action(str, Enum):
 
 
 class CreateGameRequest(BaseModel):
-    starting_balance: float = Field(50000, ge=0)
-    total_rounds: int = Field(5, ge=1, le=100)
+    # The starting balance comes from the selected difficulty preset
+    # (Easy 80k / Medium 50k / Hard 30k) — see ksell/model/difficulty.py.
+    total_rounds: int = Field(5, ge=1, le=20)
     difficulty: Difficulty = Field(
         Difficulty.MEDIUM,
         description="Game difficulty level (affects markets, taxes, player resources)",
@@ -85,7 +86,9 @@ class BotStrategyRequest(BaseModel):
 
 
 class ExecuteActionRequest(BaseModel):
-    quantity: Optional[int] = Field(None, ge=1)
+    # quantity=0 is used as an "acknowledge" for a failed planned action
+    # (the human confirms the failure before the action queue advances).
+    quantity: Optional[int] = Field(None, ge=0)
 
 
 class BotActionRequest(BaseModel):
@@ -115,6 +118,10 @@ class MarketInfoResponse(BaseModel):
     market_supply: int
     tax_rate: float = 0.0
     sell_entry_fee: int = 0
+    price_history: list[int] = Field(
+        default_factory=list,
+        description="Price per active round (drives the sparkline charts)",
+    )
 
 
 class GameStateResponse(BaseModel):
@@ -139,6 +146,12 @@ class GameStateResponse(BaseModel):
     can_sell: Optional[bool] = None
     max_affordable: Optional[int] = None
     seller_qty: Optional[int] = None
+    action_failed: Optional[bool] = None
+    action_fail_reason: Optional[str] = None
+    move_feed: list[dict] = Field(
+        default_factory=list,
+        description="Recent action steps (plan/buy/sell/skip/dice) for UI replay",
+    )
     message: str = ""
 
 

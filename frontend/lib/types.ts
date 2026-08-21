@@ -42,11 +42,31 @@ export interface MarketInfo {
   market_supply: number;
   tax_rate: number;
   sell_entry_fee: number;
+  price_history: number[];
 }
 
 export interface TurnOrderEntry {
   username: string;
   dice_total: number;
+}
+
+export interface MoveFeedEntry {
+  round: number;
+  player: string;
+  action: "plan" | "roll" | "buy" | "sell" | "skip" | "failed_buy" | "failed_sell";
+  market?: number | null;
+  product?: string;
+  dice_total?: number | null;
+  dice_price?: number | null;
+  can_buy?: boolean;
+  can_sell?: boolean;
+  max_affordable?: number;
+  seller_qty?: number;
+  quantity?: number;
+  unit_price?: number;
+  total?: number;
+  balance?: number;
+  reason?: string;
 }
 
 export interface GameState {
@@ -68,6 +88,9 @@ export interface GameState {
   can_sell: boolean | null;
   max_affordable: number | null;
   seller_qty: number | null;
+  action_failed: boolean | null;
+  action_fail_reason: string | null;
+  move_feed: MoveFeedEntry[];
   message: string;
 }
 
@@ -93,11 +116,24 @@ export interface Standing {
   inventory: InventoryItem[];
 }
 
+export interface PlayerRoundStats {
+  rounds_played: number;
+  wins: number;
+  win_rate: number;
+  best_round: number | null;
+  best_gain: number;
+  worst_round: number | null;
+  worst_loss: number;
+}
+
 export interface Results {
   game_id: string;
   winner: string;
   standings: Standing[];
   starting_balance: number;
+  total_rounds?: number;
+  rounds_played?: number;
+  stats?: Record<string, PlayerRoundStats>;
 }
 
 export interface HistoryEntry {

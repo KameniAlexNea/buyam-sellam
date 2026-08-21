@@ -6,7 +6,7 @@ import { api, ApiError } from "@/lib/api";
 import type { Difficulty, StrategyInfo } from "@/lib/types";
 import { buildSavedGame, clearGame, loadGame, saveGame, type SavedGame } from "@/lib/storage";
 import Dice from "./Dice";
-import HelpLink from "./HelpLink";
+import GameHeader from "./GameHeader";
 
 const DIFFICULTIES: { value: Difficulty; label: string; blurb: string; cash: number; active: string }[] = [
   {
@@ -155,7 +155,6 @@ export default function Lobby() {
     setCreating(true);
     try {
       const game = await api.createGame({
-        starting_balance: 50_000,
         total_rounds: rounds,
         difficulty,
       });
@@ -183,26 +182,20 @@ export default function Lobby() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-6">
-      {/* Top bar */}
-      <div className="flex items-center justify-between">
-        <span className="font-display text-[11px] font-bold uppercase tracking-[0.4em] text-gold/70">
-          🎲 Marketplace Trading Game
-        </span>
-        <HelpLink />
-      </div>
+      {/* Game-style header */}
+      <GameHeader back={false} subtitle="New Game" />
 
       {/* Hero */}
       <section className="relative overflow-hidden rounded-3xl border-2 border-gold/20 bg-gradient-to-br from-card via-board to-deep px-6 py-12 text-center shadow-card">
         <span className="font-display text-[11px] font-bold uppercase tracking-[0.4em] text-gold">
           🎲 Marketplace Trading Game
         </span>
-        <h1 className="text-shimmer mt-4 font-display text-5xl font-black uppercase tracking-wider sm:text-7xl">
-          Buyam-Sellam
-        </h1>
+        <p className="text-shimmer mx-auto mt-4 max-w-2xl font-display text-2xl font-black uppercase tracking-wider sm:text-3xl">
+          Roll the dice, read the markets, trade your way to riches.
+        </p>
         <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-dim sm:text-base">
-          Roll the dice, read the markets, and trade your way to riches. Buy low,
-          sell high, pay your taxes — and out-trade your rivals for the highest
-          balance.
+          Buy low, sell high, pay your taxes — and out-trade your rivals for the
+          highest balance.
         </p>
         <div className="mt-6 flex items-center justify-center gap-3">
           <Dice die1={4} die2={5} total={9} label="" size="lg" rolling />
@@ -300,14 +293,14 @@ export default function Lobby() {
             <input
               type="range"
               min={1}
-              max={10}
+              max={20}
               value={rounds}
               onChange={(e) => setRounds(Number(e.target.value))}
               className="w-full"
             />
             <div className="flex justify-between text-[10px] uppercase tracking-widest text-dim">
               <span>1</span>
-              <span>10</span>
+              <span>20</span>
             </div>
           </div>
 

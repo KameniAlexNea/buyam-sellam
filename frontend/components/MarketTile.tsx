@@ -3,6 +3,7 @@
 import type { MarketAction, MarketInfo } from "@/lib/types";
 import { moneyShort, productMeta, TONE_CLASSES } from "@/lib/format";
 import PlayerToken from "./PlayerToken";
+import Sparkline from "./Sparkline";
 
 interface MarketTileProps {
   market?: MarketInfo;
@@ -56,13 +57,39 @@ export default function MarketTile({
           orientation === "horizontal" ? "h-full min-h-[4.5rem]" : "w-full min-w-[4.5rem] min-h-full"
         }`}
       >
-        <span className="text-lg text-[rgba(100,180,255,0.18)]">◆</span>
+        <div className="flex flex-col items-center gap-1 px-1 text-center">
+          <span className="text-base text-[rgba(100,180,255,0.18)]">◆</span>
+          <span className="text-[8px] font-semibold uppercase tracking-wider text-[rgba(100,180,255,0.22)]">
+            {orientation === "horizontal" ? "No market this round" : "No market"}
+          </span>
+        </div>
       </div>
     );
   }
 
   const meta = productMeta(market.product);
   const horizontal = orientation === "horizontal";
+
+  // Trend vs the previous round, derived from the market's price history.
+  const hist = market.price_history ?? [];
+  const last = hist.length > 0 ? hist[hist.length - 1] : market.market_fixed_price;
+  const prev = hist.length > 1 ? hist[hist.length - 2] : last;
+  const pct = prev ? ((last - prev) / prev) * 100 : 0;
+  const trendUp = pct > 0.1;
+  const trendDown = pct < -0.1;
+  const trendStroke = trendUp ? "#00e68a" : trendDown ? "#ff4d6a" : "#7a89aa";
+  const trendLabel = trendUp
+    ? `▲ ${Math.abs(pct).toFixed(1)}%`
+    : trendDown
+    ? `▼ ${Math.abs(pct).toFixed(1)}%`
+    : "—";
+  const priceCls = active
+    ? "text-gold"
+    : trendUp
+    ? "text-buy"
+    : trendDown
+    ? "text-sell"
+    : "text-cyan";
 
   return (
     <button
@@ -78,8 +105,8 @@ export default function MarketTile({
       } ${dimmed ? "opacity-45" : ""}`}
       style={
         horizontal
-          ? { minHeight: "4.75rem" }
-          : { minWidth: "4.75rem", minHeight: "6rem" }
+          ? { minHeight: "6.25rem" }
+          : { minWidth: "4.75rem", minHeight: "8rem" }
       }
     >
       <div
@@ -96,8 +123,27 @@ export default function MarketTile({
             {market.product}
           </p>
           <p className="text-[10px] text-dim">{market.name}</p>
-          <p className={`font-display text-sm font-bold ${active ? "text-gold" : "text-cyan"}`}>
+          <p className={`font-display text-sm font-bold ${priceCls}`}>
             {moneyShort(market.market_fixed_price)}
+          </p>
+          <div className="mt-0.5 flex items-center gap-1.5">
+            <Sparkline
+              data={hist}
+              width={horizontal ? 56 : 44}
+              height={16}
+              stroke={trendStroke}
+            />
+            <span
+              className={`text-[9px] font-bold ${
+                trendUp ? "text-buy" : trendDown ? "text-sell" : "text-dim"
+              }`}
+            >
+              {trendLabel}
+            </span>
+          </div>
+          <p className="mt-0.5 text-[9px] text-dim">
+            {market.market_supply}u · tax {(market.tax_rate * 100).toFixed(0)}% · fee{" "}
+            {moneyShort(market.sell_entry_fee)}
           </p>
         </div>
         {token && (
@@ -117,6 +163,12 @@ export default function MarketTile({
           }`}
         >
           {BADGE_META[badge].label}
+        </span>
+      )}
+
+      {onClick && (
+        <span className="pointer-events-none absolute bottom-1 right-1.5 rounded bg-board/90 px-1 py-0.5 text-[8px] uppercase tracking-wider text-dim opacity-0 transition-opacity group-hover:opacity-100">
+          ⤾ tap to cycle
         </span>
       )}
     </button>

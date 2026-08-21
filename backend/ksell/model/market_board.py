@@ -48,6 +48,10 @@ class MarketBoard:
             None  # Purchase to execute at end of round
         )
 
+        # Prices move over time: history for charts + net supply/demand flow.
+        self.price_history: List[int] = [self.market_fixed_price]
+        self.net_flow: int = 0
+
         self._init_round()
         self.passing_players: List[str] = []
 
@@ -75,6 +79,35 @@ class MarketBoard:
         if self.last_purchase_price is not None:
             self.market_fixed_price = self.last_purchase_price
             self.last_purchase_price = None
+
+    # ------------------------------------------------------------------
+    # Price dynamics
+    # ------------------------------------------------------------------
+
+    def apply_net_flow(self, max_pct: float = 0.08) -> None:
+        """Nudge the price from the previous round's supply/demand balance.
+
+        Negative net_flow = players bought a lot from market supply → price up.
+        Positive net_flow = the market absorbed a lot of stock → price down.
+        """
+        if self.net_flow == 0:
+            return
+        scale = max(1, self.location.max_qty)
+        pct = max(-max_pct, min(max_pct, -self.net_flow / scale * 0.5))
+        self.market_fixed_price = max(1, int(self.market_fixed_price * (1 + pct)))
+
+    def apply_volatility(self, max_pct: float = 0.12) -> None:
+        """Apply random round-to-round price drift, clamped around the base price."""
+        drift = random.uniform(-max_pct, max_pct)
+        base = self.location.fixed_price
+        low = max(50, int(base * 0.35))
+        high = max(low + 1, int(base * 2.0))
+        new_price = int(self.market_fixed_price * (1 + drift))
+        self.market_fixed_price = max(low, min(high, new_price))
+
+    def record_price(self) -> None:
+        """Append the current price to this market's history (drives sparklines)."""
+        self.price_history.append(self.market_fixed_price)
 
     # ------------------------------------------------------------------
     # Order book
@@ -138,6 +171,7 @@ class MarketBoard:
             buy_qty = min(remaining, self.market_supply)
             cost = buy_qty * self.market_fixed_price
             self.market_supply -= buy_qty
+            self.net_flow -= buy_qty  # demand pulls supply
             self.remaining_qty = self.market_supply
             remaining -= buy_qty
             total_cost += cost
@@ -215,6 +249,7 @@ class MarketBoard:
                 "purchase_price": listing_price,
                 "quantity_listed": quantity,  # For tax calculation
             }
+            self.net_flow += buy_qty  # market absorbs stock
 
             return {
                 "success": True,
