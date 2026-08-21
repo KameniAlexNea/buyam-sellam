@@ -130,7 +130,18 @@ export default function HelpContent() {
       </Section>
 
       <Section icon="🤖" title="Bot strategies">
+        <p className="mb-2">
+          Which strategies can sit at the table depends on the <b className="text-gold">difficulty</b>:
+          Easy gets a fixed roster of weak bots (you only pick the count),
+          Medium the classic heuristics, Hard only the probability-aware traders.
+        </p>
         <ul className="space-y-1.5">
+          <Bullet>
+            <b className="text-bright">Random</b> — picks at random (baseline).
+          </Bullet>
+          <Bullet>
+            <b className="text-bright">ConservativeTrader</b> — only trades on very favorable conditions.
+          </Bullet>
           <Bullet>
             <b className="text-bright">BuyLowSellHigh</b> — hunts profit margins (classic arbitrage).
           </Bullet>
@@ -138,13 +149,16 @@ export default function HelpContent() {
             <b className="text-bright">AggressiveBuyer</b> — buys everything, hoards stock.
           </Bullet>
           <Bullet>
-            <b className="text-bright">ConservativeTrader</b> — only trades on very favorable conditions.
-          </Bullet>
-          <Bullet>
             <b className="text-bright">MarketSniper</b> — targets high-supply, low-price markets.
           </Bullet>
           <Bullet>
-            <b className="text-bright">Random</b> — picks at random (baseline).
+            <b className="text-bright">ExpectedValue</b> — buys/sells using the real 2d6 odds and expected value.
+          </Bullet>
+          <Bullet>
+            <b className="text-bright">Arbitrageur</b> — buys the cheap market, sells the expensive one for the same product.
+          </Bullet>
+          <Bullet>
+            <b className="text-bright">Endgame</b> — EV trading that liquidates before spoilage and adjusts risk by its chances of winning.
           </Bullet>
         </ul>
       </Section>

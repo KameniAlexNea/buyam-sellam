@@ -1,5 +1,9 @@
 # Buyam-Sellam
 
+<p align="center">
+  <img src="frontend/public/logo.svg" alt="Buyam-Sellam — the balance-scale logo: market products on one pan, dice on the other" width="480">
+</p>
+
 A marketplace trading **game** — roll the dice, read the markets, buy low, sell
 high, pay your taxes, and out-trade your rivals.
 

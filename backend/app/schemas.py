@@ -118,6 +118,10 @@ class MarketInfoResponse(BaseModel):
     market_supply: int
     tax_rate: float = 0.0
     sell_entry_fee: int = 0
+    capacity: int = Field(
+        0,
+        description="Base size of the market (max supply it starts each round with)",
+    )
     price_history: list[int] = Field(
         default_factory=list,
         description="Price per active round (drives the sparkline charts)",

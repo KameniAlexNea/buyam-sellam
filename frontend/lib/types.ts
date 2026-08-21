@@ -132,6 +132,18 @@ export interface StrategyInfo {
   description: string;
 }
 
+export interface DifficultyInfo {
+  label: string;
+  description: string;
+  starting_balance: number;
+  /** Strategies allowed at this level (the bot roster pool). */
+  bot_pool: StrategyInfo[];
+  /** True when the user cannot change bot strategies (Easy = fixed roster). */
+  bot_pool_locked: boolean;
+}
+
+export type Difficulties = Record<Difficulty, DifficultyInfo>;
+
 export interface Standing {
   rank: number;
   username: string;

@@ -161,3 +161,32 @@ _PRESETS: dict[Difficulty, DifficultyConfig] = {
         num_markets_per_round_range=(1, 2),
     ),
 }
+
+
+# ---------------------------------------------------------------------------
+# Bot strategy pools per difficulty level
+# ---------------------------------------------------------------------------
+# The difficulty doesn't just tune the markets — it decides WHICH bot brains
+# are allowed at the table. Easy only gets weak bots (fixed roster), Medium the
+# classic heuristics, Hard only the probability-aware traders.
+
+BOT_POOLS: dict[Difficulty, list[str]] = {
+    Difficulty.EASY: ["random", "conservativetrader"],
+    Difficulty.MEDIUM: [
+        "buylowsellhigh",
+        "marketsniper",
+        "aggressivebuyer",
+        "conservativetrader",
+    ],
+    Difficulty.HARD: ["expectedvalue", "arbitrageur", "endgame"],
+}
+
+
+def allowed_bot_strategies(difficulty: Difficulty) -> list[str]:
+    """Return the strategy keys allowed for a difficulty level."""
+    return list(BOT_POOLS.get(difficulty, BOT_POOLS[Difficulty.MEDIUM]))
+
+
+def pick_bot_strategy(difficulty: Difficulty) -> str:
+    """Pick a random strategy from the level's allowed pool."""
+    return random.choice(allowed_bot_strategies(difficulty))

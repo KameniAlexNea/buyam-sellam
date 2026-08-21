@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
-import type { Difficulty, StrategyInfo } from "@/lib/types";
+import type { Difficulties, Difficulty, StrategyInfo } from "@/lib/types";
 import { buildSavedGame, clearGame, loadGame, saveGame, type SavedGame } from "@/lib/storage";
 import GameHeader from "./GameHeader";
 
@@ -55,33 +55,26 @@ export default function Lobby() {
     BOT_NAMES.slice(0, 5).map((name) => ({ name, strategy: "" }))
   );
   const [strategies, setStrategies] = useState<StrategyInfo[]>([]);
+  const [difficulties, setDifficulties] = useState<Difficulties | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SavedGame | null>(null);
 
-  // Load the strategy list, retrying until the backend answers so the
-  // dropdown never gets stuck showing only one option.
+  // Load the strategy list and the per-difficulty bot rosters, retrying until
+  // the backend answers so the dropdown never gets stuck showing one option.
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const load = async () => {
       try {
-        const list = await api.strategies();
+        const [list, diffs] = await Promise.all([
+          api.strategies(),
+          api.difficulties(),
+        ]);
         if (cancelled) return;
-        if (list.length > 0) {
+        if (list.length > 0 && diffs) {
           setStrategies(list);
-          // Assign a strategy straight from the API to any bot that doesn't
-          // have one yet (the list is the single source of truth).
-          setBots((prev) =>
-            prev.map((b) =>
-              b.strategy
-                ? b
-                : {
-                    ...b,
-                    strategy: list[Math.floor(Math.random() * list.length)].name,
-                  }
-            )
-          );
+          setDifficulties(diffs);
         } else {
           timer = setTimeout(load, 2500);
         }
@@ -95,6 +88,38 @@ export default function Lobby() {
       if (timer) clearTimeout(timer);
     };
   }, []);
+
+  // The strategies a bot may use come from the SELECTED difficulty's pool.
+  // Until the difficulty metadata loads, fall back to the full strategy list.
+  const allowedStrategies = useMemo<StrategyInfo[]>(() => {
+    if (difficulties) return difficulties[difficulty].bot_pool;
+    return strategies;
+  }, [difficulties, difficulty, strategies]);
+
+  // Easy fixes the bot roster (weak AI) — the user can only change the count.
+  const rosterLocked = difficulties?.[difficulty].bot_pool_locked ?? false;
+
+  const labelOf = (name: string) =>
+    allowedStrategies.find((s) => s.name === name)?.label ?? name;
+
+  // Keep every bot on a strategy from the current difficulty's pool: when the
+  // level loads or changes, bots migrate to that pool automatically.
+  useEffect(() => {
+    if (allowedStrategies.length === 0) return;
+    setBots((prev) =>
+      prev.map((b) =>
+        allowedStrategies.some((s) => s.name === b.strategy)
+          ? b
+          : {
+              ...b,
+              strategy:
+                allowedStrategies[
+                  Math.floor(Math.random() * allowedStrategies.length)
+                ].name,
+            }
+      )
+    );
+  }, [allowedStrategies]);
 
   // Offer to resume the last game saved to localStorage.
   useEffect(() => {
@@ -121,8 +146,9 @@ export default function Lobby() {
   };
 
   const addBot = () => {
-    if (strategies.length === 0) return; // strategies not loaded yet
-    const pick = strategies[Math.floor(Math.random() * strategies.length)];
+    if (allowedStrategies.length === 0) return; // roster not loaded yet
+    const pick =
+      allowedStrategies[Math.floor(Math.random() * allowedStrategies.length)];
     setBots((prev) => [...prev, { name: nextBotName, strategy: pick.name }]);
   };
 
@@ -147,7 +173,7 @@ export default function Lobby() {
       setError("Player names must be unique.");
       return;
     }
-    if (strategies.length === 0) {
+    if (allowedStrategies.length === 0) {
       setError("Bot strategies are still loading — wait a moment and try again.");
       return;
     }
@@ -290,6 +316,12 @@ export default function Lobby() {
                 </button>
               ))}
             </div>
+            {rosterLocked && (
+              <p className="mt-2 text-[11px] leading-snug text-dim">
+                🔒 This level fixes the bot roster — you can only change the
+                number of opponents.
+              </p>
+            )}
           </div>
 
           {/* Rounds */}
@@ -385,7 +417,7 @@ export default function Lobby() {
               <button
                 type="button"
                 onClick={addBot}
-                disabled={strategies.length === 0}
+                disabled={allowedStrategies.length === 0}
                 className="rounded-lg border border-gold/30 bg-gold/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-gold transition-colors hover:bg-gold/20 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 + Add bot
@@ -404,21 +436,30 @@ export default function Lobby() {
                   <span className="flex-1 truncate text-sm font-semibold">
                     {bot.name}
                   </span>
-                  <select
-                    value={bot.strategy}
-                    onChange={(e) => updateBot(i, { strategy: e.target.value })}
-                    className="rounded-lg border border-[rgba(100,180,255,0.2)] bg-card px-2 py-1.5 text-xs text-bright outline-none focus:border-gold/50"
-                  >
-                    {strategies.length === 0 ? (
-                      <option value="">Loading strategies…</option>
-                    ) : (
-                      strategies.map((s) => (
-                        <option key={s.name} value={s.name}>
-                          {s.label}
-                        </option>
-                      ))
-                    )}
-                  </select>
+                  {rosterLocked ? (
+                    <span
+                      title="Fixed by difficulty — you can only change the number of opponents"
+                      className="shrink-0 rounded-lg border border-[rgba(100,180,255,0.15)] bg-card/60 px-2 py-1.5 text-[11px] text-dim"
+                    >
+                      🔒 {labelOf(bot.strategy)}
+                    </span>
+                  ) : (
+                    <select
+                      value={bot.strategy}
+                      onChange={(e) => updateBot(i, { strategy: e.target.value })}
+                      className="rounded-lg border border-[rgba(100,180,255,0.2)] bg-card px-2 py-1.5 text-xs text-bright outline-none focus:border-gold/50"
+                    >
+                      {allowedStrategies.length === 0 ? (
+                        <option value="">Loading strategies…</option>
+                      ) : (
+                        allowedStrategies.map((s) => (
+                          <option key={s.name} value={s.name}>
+                            {s.label}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  )}
                   <button
                     type="button"
                     onClick={() => removeBot(i)}
@@ -438,10 +479,16 @@ export default function Lobby() {
             </div>
           </div>
 
-          <p className="mt-4 text-xs text-dim">
-            Bot strategies: BuyLowSellHigh hunts margins, AggressiveBuyer hoards
-            stock, ConservativeTrader plays it safe, MarketSniper targets value
-            markets.
+          <p className="mt-4 text-xs leading-relaxed text-dim">
+            {difficulties
+              ? `${difficulties[difficulty].label} bots: ${difficulties[
+                  difficulty
+                ].bot_pool
+                  .map((s) => s.label)
+                  .join(" · ")}.`
+              : "Loading bot roster…"}
+            {rosterLocked &&
+              " You can only change the number of opponents — the roster is fixed."}
           </p>
         </section>
       </div>
