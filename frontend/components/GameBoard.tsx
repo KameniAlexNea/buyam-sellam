@@ -14,6 +14,7 @@ import HelpLink from "./HelpLink";
 import ActionPanel from "./ActionPanel";
 import BotTurnPanel from "./BotTurnPanel";
 import StrategyDashboard from "./StrategyDashboard";
+import ActionDashboard from "./ActionDashboard";
 import ResultsPanel from "./ResultsPanel";
 import GameLog from "./GameLog";
 
@@ -293,6 +294,8 @@ export default function GameBoard({ gameId }: { gameId: string }) {
           canSubmit={canSubmitStrategy}
           onConfirm={confirmStrategy}
         />
+      ) : game.phase === "action" && isHumanTurn ? (
+        <ActionDashboard game={game} busy={busy} onExecute={executeAction} />
       ) : (
         <Board
           players={game.players}
