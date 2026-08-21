@@ -50,6 +50,12 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
   const balance = player?.balance ?? 0;
   const newBalance = isBuy ? balance - total : balance + total;
 
+  // Cost basis for the product we're trading (avg price paid per unit).
+  const invItem = player?.inventory.find((it) => it.product.name === market?.product);
+  const avgCost = invItem?.avg_cost ?? 0;
+  const profitPerUnit = !isBuy && avgCost > 0 ? unitPrice - avgCost : null;
+  const profitTotal = profitPerUnit != null ? profitPerUnit * qty : null;
+
   const hist = market?.price_history ?? [];
   const last = hist.length > 0 ? hist[hist.length - 1] : marketPrice;
   const prev = hist.length > 1 ? hist[hist.length - 2] : last;
@@ -218,6 +224,19 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
               </>
             ) : (
               <>
+                <Row
+                  label="Cost basis"
+                  value={`${money(avgCost)}/u`}
+                  note={`you paid ${money(avgCost * qty)} for ${qty}u`}
+                />
+                {profitTotal != null && (
+                  <Row
+                    label="Profit vs sell price"
+                    value={`${profitTotal >= 0 ? "+" : ""}${money(profitTotal)}`}
+                    accent
+                    note={`${moneyShort(profitPerUnit ?? 0)}/u`}
+                  />
+                )}
                 <Row label={`Revenue (${qty} × ${moneyShort(unitPrice)})`} value={`+${money(gross)}`} />
                 <Row label={`Entry fee`} value={`−${money(entryFee)}`} note="paid at entry" />
                 <Row label={`Tax (${Math.round(taxRate * 100)}%)`} value={`−${money(tax)}`} />

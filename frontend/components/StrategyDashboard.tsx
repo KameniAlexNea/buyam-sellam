@@ -74,6 +74,15 @@ export default function StrategyDashboard({
     return map;
   }, [plannerPlayer]);
 
+  // Average price paid per unit, per product (cost basis for sells).
+  const avgCosts = useMemo(() => {
+    const map: Record<string, number> = {};
+    plannerPlayer?.inventory.forEach((it) => {
+      map[it.product.name] = it.avg_cost;
+    });
+    return map;
+  }, [plannerPlayer]);
+
   const chosen = markets.filter(
     (m) => (choices[m.market_index] ?? "skip") !== "skip"
   ).length;
@@ -149,7 +158,9 @@ export default function StrategyDashboard({
   const tradeCard = (m: MarketInfo) => {
     const meta = productMeta(m.product);
     const owned = ownedProducts[m.product] ?? 0;
+    const avgCost = avgCosts[m.product] ?? 0;
     const canSell = owned > 0;
+    const profit = canSell && avgCost > 0 ? m.market_fixed_price - avgCost : null;
     const sel = choices[m.market_index] ?? "skip";
     const buyRoll = rollForBuy(m.market_fixed_price);
     const sellRoll = rollForSell(m.market_fixed_price);
@@ -247,6 +258,18 @@ export default function StrategyDashboard({
         {sel === "sell" && (
           <p className="mt-1 text-[10px] text-dim">
             you own <b className="text-bright">{owned}</b> {m.product}
+          </p>
+        )}
+        {canSell && (
+          <p className="mt-1.5 flex items-center justify-between rounded-md border border-[rgba(100,180,255,0.08)] bg-board/40 px-2 py-1 text-[10px]">
+            <span className="text-dim">
+              cost basis <b className="text-bright">{money(avgCost)}</b>/u
+            </span>
+            <span className={profit != null && profit >= 0 ? "text-buy" : "text-sell"}>
+              {profit != null
+                ? `vs market ${profit >= 0 ? "+" : ""}${money(profit)}/u`
+                : "no cost recorded"}
+            </span>
           </p>
         )}
       </div>
@@ -481,14 +504,22 @@ export default function StrategyDashboard({
             Inventory ({plannerPlayer?.inventory.length ?? 0} items)
           </p>
           <div className="mt-2 flex flex-col gap-1">
-            {plannerPlayer?.inventory.map((it) => (
-              <div key={it.product.name} className="flex items-center justify-between rounded-md bg-board/40 px-2 py-1 text-[11px]">
-                <span className="truncate text-bright">
-                  {productMeta(it.product.name).icon} {it.product.name}
-                </span>
-                <span className="font-display font-bold text-cyan">× {it.quantity}</span>
-              </div>
-            ))}
+            {plannerPlayer?.inventory.map((it) => {
+              const totalVal = it.quantity * it.avg_cost;
+              return (
+                <div key={it.product.name} className="flex items-center justify-between rounded-md bg-board/40 px-2 py-1 text-[11px]">
+                  <span className="truncate text-bright">
+                    {productMeta(it.product.name).icon} {it.product.name}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="font-display font-bold text-cyan">× {it.quantity}</span>
+                    <span className="text-[9px] text-dim" title={`avg cost ${money(it.avg_cost)}/u · value ${money(totalVal)}`}>
+                      @ {moneyShort(it.avg_cost)}
+                    </span>
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
