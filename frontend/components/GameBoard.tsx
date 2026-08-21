@@ -15,6 +15,8 @@ import BotTurnPanel from "./BotTurnPanel";
 import StrategyDashboard from "./StrategyDashboard";
 import ActionDashboard from "./ActionDashboard";
 import ResultsPanel from "./ResultsPanel";
+import RoundRecapPanel from "./RoundRecapPanel";
+import NewsTicker from "./NewsTicker";
 import GameLog from "./GameLog";
 
 const CYCLE: MarketAction[] = ["skip", "buy", "sell"];
@@ -36,12 +38,15 @@ export default function GameBoard({ gameId }: { gameId: string }) {
     refreshHistory,
     submitStrategy,
     executeAction,
+    nextRound,
   } = useGameState(gameId);
 
   const [results, setResults] = useState<Results | null>(null);
   const [choices, setChoices] = useState<Record<number, MarketAction>>({});
   const [showLog, setShowLog] = useState(false);
   const [navError, setNavError] = useState<string | null>(null);
+  const [confirmRematch, setConfirmRematch] = useState(false);
+  const [rematching, setRematching] = useState(false);
   const router = useRouter();
 
   const gameOver = game?.phase === "game_over";
@@ -174,8 +179,16 @@ export default function GameBoard({ gameId }: { gameId: string }) {
   const newGame = () => router.push("/");
 
   // Start a fresh game with the exact same table (difficulty, rounds, players).
-  const rematch = async () => {
+  // Guarded by a confirmation dialog so it can't fire by accident.
+  const requestRematch = () => {
     if (!game) return;
+    setConfirmRematch(true);
+  };
+
+  const doRematch = async () => {
+    if (!game) return;
+    setConfirmRematch(false);
+    setRematching(true);
     setNavError(null);
     try {
       const fresh = await api.createGame({
@@ -200,6 +213,8 @@ export default function GameBoard({ gameId }: { gameId: string }) {
       setNavError(
         e instanceof ApiError ? e.message : "Could not start a rematch."
       );
+    } finally {
+      setRematching(false);
     }
   };
 
@@ -221,7 +236,7 @@ export default function GameBoard({ gameId }: { gameId: string }) {
         <ResultsPanel
           results={results}
           humanPlayers={humanPlayers}
-          onRematch={rematch}
+          onRematch={requestRematch}
           onNewGame={newGame}
         />
         {navError && <p className="text-xs text-sell">{navError}</p>}
@@ -270,8 +285,13 @@ export default function GameBoard({ gameId }: { gameId: string }) {
         />
       )}
 
+      {/* Market news ticker (strategy & action phases) */}
+      {["strategy", "action"].includes(game.phase) && game.news.length > 0 && (
+        <NewsTicker items={game.news} />
+      )}
+
       {/* Compact message (transitions only) */}
-      {game.message && !["strategy", "action", "game_over"].includes(game.phase) && (
+      {game.message && !["strategy", "action", "end_round", "game_over"].includes(game.phase) && (
         <p className="animate-fade-in-up truncate rounded-lg border border-[rgba(100,180,255,0.12)] bg-board/50 px-3 py-1.5 text-center text-xs text-bright">
           {game.message}
         </p>
@@ -292,6 +312,16 @@ export default function GameBoard({ gameId }: { gameId: string }) {
         />
       ) : game.phase === "action" && isHumanTurn ? (
         <ActionDashboard game={game} busy={busy} onExecute={executeAction} />
+      ) : game.phase === "end_round" && game.round_recap ? (
+        // Round-end recap gets the full width — the "what happened" moment.
+        <div className="mx-auto w-full max-w-2xl">
+          <RoundRecapPanel
+            recap={game.round_recap}
+            humanPlayers={humanPlayers}
+            busy={busy}
+            onNext={nextRound}
+          />
+        </div>
       ) : game.phase === "game_over" ? (
         // Final results get the full width — no board decorations around them.
         <div className="mx-auto w-full max-w-2xl">{center}</div>
@@ -315,6 +345,39 @@ export default function GameBoard({ gameId }: { gameId: string }) {
       {showLog && (
         <div className="animate-fade-in-up rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3 shadow-card">
           <GameLog history={history} />
+        </div>
+      )}
+
+      {/* Rematch confirmation dialog */}
+      {confirmRematch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="animate-fade-in-up w-full max-w-sm rounded-2xl border border-gold/30 bg-card p-6 text-center shadow-glow-gold">
+            <p className="text-3xl">♻️</p>
+            <h3 className="mt-2 font-display text-lg font-black uppercase tracking-wide">
+              Rematch?
+            </h3>
+            <p className="mt-2 text-sm text-dim">
+              Start a fresh game with the same players, difficulty and rounds?
+            </p>
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmRematch(false)}
+                disabled={rematching}
+                className="flex-1 rounded-xl border border-[rgba(100,180,255,0.2)] bg-card/60 px-4 py-2.5 font-display text-xs font-bold uppercase tracking-widest text-bright transition-all hover:border-gold/40 hover:text-gold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={doRematch}
+                disabled={rematching}
+                className="flex-1 rounded-xl bg-gold px-4 py-2.5 font-display text-xs font-bold uppercase tracking-widest text-deep shadow-glow-gold transition-all hover:brightness-110 active:scale-95 disabled:opacity-50"
+              >
+                {rematching ? "…" : "Yes, rematch"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </Shell>

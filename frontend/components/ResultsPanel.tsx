@@ -129,9 +129,9 @@ export default function ResultsPanel({
                   <p
                     className={`mt-1 w-full truncate text-center text-[11px] font-black uppercase tracking-wide ${pc.text}`}
                   >
-                    {s.username}
+                    {s.username === "You" ? "You" : s.username}
                   </p>
-                  {humanPlayers?.includes(s.username) && (
+                  {humanPlayers?.includes(s.username) && s.username !== "You" && (
                     <span className="mt-0.5 rounded-full bg-gold/15 px-1.5 py-0.5 text-[8px] font-bold uppercase text-gold border border-gold/30">
                       You
                     </span>
@@ -201,20 +201,26 @@ export default function ResultsPanel({
                         )}
                       </div>
                       <div className="mt-0.5 flex flex-wrap gap-1">
-                        {s.inventory.length === 0 ? (
-                          <span className="text-[10px] italic text-dim">no inventory</span>
+                        {s.spoiled && s.spoiled.length > 0 ? (
+                          <>
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-dim/70">
+                              spoiled:
+                            </span>
+                            {s.spoiled.map((it) => {
+                              const meta = productMeta(it.product.name);
+                              return (
+                                <span
+                                  key={it.product.name}
+                                  title="Unsold stock spoiled at market close — worth nothing"
+                                  className={`inline-flex items-center gap-1 rounded border px-1 py-0.5 text-[9px] line-through opacity-70 ${TONE_CLASSES[meta.tone]}`}
+                                >
+                                  {meta.icon} {it.quantity}
+                                </span>
+                              );
+                            })}
+                          </>
                         ) : (
-                          s.inventory.map((it) => {
-                            const meta = productMeta(it.product.name);
-                            return (
-                              <span
-                                key={it.product.name}
-                                className={`inline-flex items-center gap-1 rounded border px-1 py-0.5 text-[9px] ${TONE_CLASSES[meta.tone]}`}
-                              >
-                                {meta.icon} {it.quantity}
-                              </span>
-                            );
-                          })
+                          <span className="text-[10px] italic text-dim">no inventory</span>
                         )}
                       </div>
                     </td>
@@ -281,6 +287,9 @@ export default function ResultsPanel({
                 </p>
               </div>
             </div>
+            <p className="mt-2 rounded-lg border border-[rgba(100,180,255,0.08)] bg-board/40 px-2 py-1.5 text-center text-[9px] text-dim">
+              🥀 Unsold stock spoils at market close — only cash counts.
+            </p>
           </div>
         </div>
       </div>

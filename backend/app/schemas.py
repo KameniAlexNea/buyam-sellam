@@ -152,6 +152,14 @@ class GameStateResponse(BaseModel):
         default_factory=list,
         description="Recent action steps (plan/buy/sell/skip/dice) for UI replay",
     )
+    round_recap: Optional[dict] = Field(
+        default=None,
+        description="End-of-round summary (per-player changes, market moves, headline)",
+    )
+    news: list[dict] = Field(
+        default_factory=list,
+        description="Market news headlines for the current round (ticker)",
+    )
     message: str = ""
 
 

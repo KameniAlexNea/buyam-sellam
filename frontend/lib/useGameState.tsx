@@ -42,6 +42,7 @@ export interface UseGameState {
   refreshHistory: () => Promise<void>;
   submitStrategy: (username: string, choices: StrategyChoice[]) => Promise<void>;
   executeAction: (quantity: number) => Promise<void>;
+  nextRound: () => Promise<void>;
 }
 
 function isBot(game: GameState, username: string): boolean {
@@ -273,6 +274,12 @@ export function useGameState(gameId: string): UseGameState {
     [gameId, refresh, drive]
   );
 
+  const nextRound = useCallback(async () => {
+    await api.nextRound(gameId);
+    await refresh();
+    await drive();
+  }, [gameId, refresh, drive]);
+
   return {
     game,
     history,
@@ -290,5 +297,6 @@ export function useGameState(gameId: string): UseGameState {
     refreshHistory,
     submitStrategy,
     executeAction,
+    nextRound,
   };
 }

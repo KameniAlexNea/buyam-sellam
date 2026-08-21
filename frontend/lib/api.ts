@@ -75,6 +75,9 @@ export const api = {
   startGame: (id: string) =>
     request<GameState>(`/games/${id}/start`, { method: "POST" }),
 
+  nextRound: (id: string) =>
+    request<GameState>(`/games/${id}/next-round`, { method: "POST" }),
+
   submitStrategy: (
     id: string,
     body: { username: string; strategy: { market_index: number; action: MarketAction }[] }

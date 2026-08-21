@@ -91,7 +91,31 @@ export interface GameState {
   action_failed: boolean | null;
   action_fail_reason: string | null;
   move_feed: MoveFeedEntry[];
+  round_recap: RoundRecap | null;
+  news: NewsItem[];
   message: string;
+}
+
+export interface RoundRecapPlayer {
+  username: string;
+  balance: number;
+  change: number;
+  role: string;
+}
+
+export interface RoundRecap {
+  round: number;
+  players: RoundRecapPlayer[];
+  news: NewsItem[];
+  is_last: boolean;
+}
+
+export interface NewsItem {
+  product: string | null;
+  market: string | null;
+  pct: number;
+  tone: "up" | "down" | "flat";
+  text: string;
 }
 
 export interface ActionResult {
@@ -114,6 +138,8 @@ export interface Standing {
   final_balance: number;
   profit_loss: number;
   inventory: InventoryItem[];
+  /** Unsold stock at the end of the game — spoiled, worth nothing. */
+  spoiled?: InventoryItem[];
 }
 
 export interface PlayerRoundStats {

@@ -128,6 +128,8 @@ def _game_state(game_id: str) -> GameStateResponse:
         action_failed=meta.get("action_failed"),
         action_fail_reason=meta.get("action_fail_reason"),
         move_feed=meta.get("move_feed", []),
+        round_recap=meta.get("round_recap"),
+        news=meta.get("news", []),
         message=meta.get("message", ""),
     )
 
@@ -256,6 +258,9 @@ def _serialize_game(game_id: str, table: Table, meta: Dict[str, Any]) -> Dict[st
         "message": meta.get("message", ""),
         "move_feed": meta.get("move_feed", []),
         "round_history": meta.get("round_history", []),
+        "round_recap": meta.get("round_recap"),
+        "news": meta.get("news", []),
+        "spoiled_inventory": meta.get("spoiled_inventory", {}),
         "created_at": meta.get("created_at", ""),
         "current_round": table.current_round,
         "markets": [_serialize_market(m) for m in table.markets],
@@ -309,6 +314,9 @@ def _deserialize_game(state: Dict[str, Any]) -> Tuple[Table, Dict[str, Any]]:
         "message": state.get("message", ""),
         "move_feed": state.get("move_feed", []),
         "round_history": state.get("round_history", []),
+        "round_recap": state.get("round_recap"),
+        "news": state.get("news", []),
+        "spoiled_inventory": state.get("spoiled_inventory", {}),
         "created_at": state.get("created_at", ""),
         "active_markets": active_markets,
     }
@@ -399,6 +407,8 @@ def create_game(req: CreateGameRequest):
         "current_market_index": None,
         "action_index": 0,
         "move_feed": [],
+        "round_recap": None,
+        "news": [],
         "created_at": _now(),
         "message": "Game created. Add players with POST /games/{id}/players",
     }
@@ -528,11 +538,53 @@ def _start_new_round(game_id: str):
     meta["player_strategies"] = {}
     meta["action_failed"] = None
     meta["action_fail_reason"] = None
+    meta["round_recap"] = None  # clear the previous round's recap
+    meta["news"] = _build_news(markets)
     meta["message"] = (
         f"Round {table.current_round} started. {num_markets} markets active. Submit strategies."
     )
 
     _flush(game_id)
+
+
+def _build_news(markets: List[MarketBoard]) -> List[Dict[str, Any]]:
+    """Build market-news headlines from this round's price moves.
+
+    Each active market's price_history holds the previous round's price and the
+    new one (after volatility/net-flow). We surface the biggest movers as short
+    ticker headlines so the board feels alive and hint at strategy.
+    """
+    items: List[Dict[str, Any]] = []
+    for m in markets:
+        hist = m.price_history
+        prev = hist[-2] if len(hist) >= 2 else None
+        cur = m.market_fixed_price
+        pct = ((cur - prev) / prev * 100) if prev else 0.0
+        tone = "up" if pct >= 5 else "down" if pct <= -5 else "flat"
+        if tone != "flat":
+            items.append(
+                {
+                    "product": m.product,
+                    "market": m.location.name,
+                    "pct": round(pct, 1),
+                    "tone": tone,
+                    "text": (
+                        f"{m.product} {'surges' if pct > 0 else 'slumps'} "
+                        f"{abs(pct):.0f}% at {m.location.name}"
+                    ),
+                }
+            )
+    if not items:
+        items.append(
+            {
+                "product": None,
+                "market": None,
+                "pct": 0,
+                "tone": "flat",
+                "text": "Markets calm — prices holding steady this round.",
+            }
+        )
+    return items
 
 
 def _validate_strategy(
@@ -1064,29 +1116,36 @@ def execute_bot_action(game_id: str, req: BotActionRequest):
 
 
 def _end_current_round(game_id: str):
-    """End the current round and either start a new one or end the game."""
+    """End the current round: record balance changes and pause for a recap.
+
+    Instead of silently starting the next round (or ending the game), we
+    transition to the END_ROUND phase and let the frontend show a recap. A
+    separate POST /next-round advances past it, so the "what happened this
+    round" moment is visible.
+    """
     table = _tables[game_id]
     meta = _meta[game_id]
     markets = meta["active_markets"]
 
     purchases = table.end_round(markets)
 
-    if table.current_round >= table.total_rounds:
-        meta["phase"] = GamePhase.GAME_OVER.value
-        meta["message"] = "Game over! Final standings are ready."
-    else:
-        _start_new_round(game_id)
+    # Per-player balance delta this round (vs last round end or starting balance).
+    round_history = meta.get("round_history", [])
+    prev_balances = round_history[-1]["balances"] if round_history else None
+    starting = meta.get("starting_balance", 0)
+    players_recap = []
+    for p in table.players:
+        prev = (prev_balances or {}).get(p.username, starting)
+        players_recap.append(
+            {
+                "username": p.username,
+                "balance": p.balance,
+                "change": round(p.balance - prev, 2),
+                "role": meta.get("player_roles", {}).get(p.username, {}).get("role", "human"),
+            }
+        )
 
-    meta["player_actions_done"] = {}
-    meta["dice_total"] = None
-    meta["dice_price"] = None
-    meta["can_buy"] = None
-    meta["can_sell"] = None
-    meta["max_affordable"] = None
-    meta["seller_qty"] = None
-
-    # Snapshot each player's balance at the end of this round, so results can
-    # show per-round performance (best/worst round, win rate, biggest moves).
+    # Snapshot balances for results stats (best/worst round, win rate, etc.).
     meta.setdefault("round_history", []).append(
         {
             "round": table.current_round,
@@ -1094,10 +1153,58 @@ def _end_current_round(game_id: str):
         }
     )
 
+    meta["round_recap"] = {
+        "round": table.current_round,
+        "players": players_recap,
+        "news": meta.get("news", []),
+        "is_last": table.current_round >= table.total_rounds,
+    }
+
+    # Clear transient action state.
+    meta["player_actions_done"] = {}
+    meta["dice_total"] = None
+    meta["dice_price"] = None
+    meta["can_buy"] = None
+    meta["can_sell"] = None
+    meta["max_affordable"] = None
+    meta["seller_qty"] = None
+    meta["current_player"] = None
+    meta["current_market_index"] = None
+
+    meta["phase"] = GamePhase.END_ROUND.value
+    meta["message"] = f"Round {table.current_round} complete."
+
     _flush(game_id)
     append_history(
         game_id, "round_ended", {"round": table.current_round, "purchases": purchases}
     )
+
+
+@router.post("/{game_id}/next-round", summary="Advance past the round recap")
+def next_round(game_id: str):
+    """Move from the end-of-round recap to the next round (or game over)."""
+    _ensure_loaded(game_id)
+    _check_phase(game_id, GamePhase.END_ROUND)
+    table = _tables[game_id]
+    meta = _meta[game_id]
+
+    if table.current_round >= table.total_rounds:
+        meta["phase"] = GamePhase.GAME_OVER.value
+        meta["message"] = "Game over! Final standings are ready."
+
+        # Market day is over — any unsold stock spoils and is worthless.
+        # Snapshot it for the results screen, then clear inventory so the
+        # final ranking reflects cash only (spoiled goods don't count).
+        spoiled: Dict[str, List[Dict[str, Any]]] = {}
+        for p in table.players:
+            spoiled[p.username] = [_product_to_dict(it) for it in p.inventory]
+            p.inventory.clear()
+        meta["spoiled_inventory"] = spoiled
+    else:
+        _start_new_round(game_id)
+
+    _flush(game_id)
+    return _game_state(game_id)
 
 
 # ---------------------------------------------------------------------------
@@ -1115,6 +1222,7 @@ def get_results(game_id: str):
     round_history = meta.get("round_history", [])
 
     final_standings = sorted(table.players, key=lambda p: p.balance, reverse=True)
+    spoiled = meta.get("spoiled_inventory", {})
     standings = []
     for rank, player in enumerate(final_standings, 1):
         profit_loss = player.balance - starting_balance
@@ -1125,6 +1233,7 @@ def get_results(game_id: str):
                 "final_balance": player.balance,
                 "profit_loss": round(profit_loss, 2),
                 "inventory": [_product_to_dict(item) for item in player.inventory],
+                "spoiled": spoiled.get(player.username, []),
             }
         )
 
