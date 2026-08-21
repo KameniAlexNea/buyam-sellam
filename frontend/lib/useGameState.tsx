@@ -5,6 +5,9 @@ import { api, ApiError } from "./api";
 import type { GameState, HistoryEntry, MarketAction } from "./types";
 
 const POLL_MS = 900; // poll while a bot needs driving
+const BOT_STEP_MS = 1500; // visible pause between consecutive bot moves
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // Polling is strictly action-driven: requests are only made while a bot is
 // being driven. When it's a human's turn (or any state where nothing can
@@ -132,6 +135,7 @@ export function useGameState(gameId: string): UseGameState {
             strategy_name: strat,
           });
           await refresh();
+          await sleep(BOT_STEP_MS); // let the human see the plan land
           continue;
         }
 
@@ -146,6 +150,7 @@ export function useGameState(gameId: string): UseGameState {
             strategy_name: strat,
           });
           await refresh();
+          await sleep(BOT_STEP_MS); // let the human see the move land
           continue;
         }
 

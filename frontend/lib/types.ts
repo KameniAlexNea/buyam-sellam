@@ -50,6 +50,25 @@ export interface TurnOrderEntry {
   dice_total: number;
 }
 
+export interface MoveFeedEntry {
+  round: number;
+  player: string;
+  action: "plan" | "roll" | "buy" | "sell" | "skip" | "failed_buy" | "failed_sell";
+  market?: number | null;
+  product?: string;
+  dice_total?: number | null;
+  dice_price?: number | null;
+  can_buy?: boolean;
+  can_sell?: boolean;
+  max_affordable?: number;
+  seller_qty?: number;
+  quantity?: number;
+  unit_price?: number;
+  total?: number;
+  balance?: number;
+  reason?: string;
+}
+
 export interface GameState {
   game_id: string;
   phase: GamePhase;
@@ -71,6 +90,7 @@ export interface GameState {
   seller_qty: number | null;
   action_failed: boolean | null;
   action_fail_reason: string | null;
+  move_feed: MoveFeedEntry[];
   message: string;
 }
 

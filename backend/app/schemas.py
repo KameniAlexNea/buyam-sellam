@@ -36,13 +36,8 @@ class Action(str, Enum):
 
 
 class CreateGameRequest(BaseModel):
-    # Kept for backward compatibility, but the starting balance now comes from
-    # the selected difficulty preset (Easy 80k / Medium 50k / Hard 30k).
-    starting_balance: Optional[float] = Field(
-        None,
-        ge=0,
-        description="Deprecated: starting balance is derived from the difficulty preset.",
-    )
+    # The starting balance comes from the selected difficulty preset
+    # (Easy 80k / Medium 50k / Hard 30k) — see ksell/model/difficulty.py.
     total_rounds: int = Field(5, ge=1, le=100)
     difficulty: Difficulty = Field(
         Difficulty.MEDIUM,
@@ -153,6 +148,10 @@ class GameStateResponse(BaseModel):
     seller_qty: Optional[int] = None
     action_failed: Optional[bool] = None
     action_fail_reason: Optional[str] = None
+    move_feed: list[dict] = Field(
+        default_factory=list,
+        description="Recent action steps (plan/buy/sell/skip/dice) for UI replay",
+    )
     message: str = ""
 
 

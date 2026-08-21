@@ -125,6 +125,7 @@ def _game_state(game_id: str) -> GameStateResponse:
         seller_qty=meta.get("seller_qty"),
         action_failed=meta.get("action_failed"),
         action_fail_reason=meta.get("action_fail_reason"),
+        move_feed=meta.get("move_feed", []),
         message=meta.get("message", ""),
     )
 
@@ -175,6 +176,22 @@ def _check_phase(game_id: str, *allowed: GamePhase) -> None:
         )
 
 
+def _record_move(game_id: str, **fields: Any) -> None:
+    """Append an action step to the game's move feed (for UI replay).
+
+    Each entry is a small dict describing one visible step: who, what action,
+    on which market, the dice, the quantity, the money moved, and the player's
+    resulting balance. The frontend renders the tail of this feed so bot turns
+    are visible instead of happening silently.
+    """
+    meta = _meta[game_id]
+    feed = meta.setdefault("move_feed", [])
+    feed.append({"round": meta.get("round_number", 0), **fields})
+    # Keep the feed bounded (last ~80 steps) so it never grows unboundedly.
+    if len(feed) > 80:
+        del feed[:-80]
+
+
 # ---------------------------------------------------------------------------
 # Game lifecycle
 # ---------------------------------------------------------------------------
@@ -205,6 +222,7 @@ def create_game(req: CreateGameRequest):
         "current_player": None,
         "current_market_index": None,
         "action_index": 0,
+        "move_feed": [],
         "message": "Game created. Add players with POST /games/{id}/players",
     }
     append_history(
@@ -386,6 +404,22 @@ def _apply_submitted_strategy(
     if username not in meta["strategies_submitted"]:
         meta["strategies_submitted"].append(username)
 
+    # Record the player's plan in the move feed so the UI can show what each
+    # player (especially bots) decided before trading.
+    role = meta.get("player_roles", {}).get(username, {}).get("role", "human")
+    if role == "bot":
+        plan = ", ".join(
+            f"{mi}:{act}" for mi, act in parsed
+        )
+        _record_move(
+            game_id,
+            player=username,
+            action="plan",
+            market=None,
+            product=None,
+            reason=plan or "skip all",
+        )
+
     # All players submitted → determine turn order → transition to ACTION
     if len(meta["strategies_submitted"]) == len(table.players):
         turn_order = table.determine_turn_order()
@@ -513,6 +547,16 @@ def _execute_next_action(game_id: str):
             player_actions_done.setdefault(player.username, 0)
             player_actions_done[player.username] += 1
             meta["player_actions_done"] = player_actions_done
+            _record_move(
+                game_id,
+                player=player.username,
+                action="skip",
+                market=market_num,
+                product=market.location.product,
+                dice_total=None,
+                dice_price=None,
+                reason="Chose to skip",
+            )
             continue
 
         # Roll dice for this market
@@ -540,11 +584,32 @@ def _execute_next_action(game_id: str):
                 player_actions_done.setdefault(player.username, 0)
                 player_actions_done[player.username] += 1
                 meta["player_actions_done"] = player_actions_done
+                _record_move(
+                    game_id,
+                    player=player.username,
+                    action="failed_buy",
+                    market=market_num,
+                    product=market.location.product,
+                    dice_total=dice_total,
+                    dice_price=dice_price,
+                    reason=reason,
+                )
                 continue
             meta["can_buy"] = True
             meta["max_affordable"] = result["max_affordable"]
             meta["message"] = (
                 f"{player.username}: Buy condition met! Dice {dice_price} >= market {market.market_fixed_price}. Max affordable: {result['max_affordable']}. Send POST /action with quantity."
+            )
+            _record_move(
+                game_id,
+                player=player.username,
+                action="roll",
+                market=market_num,
+                product=market.location.product,
+                dice_total=dice_total,
+                dice_price=dice_price,
+                can_buy=True,
+                max_affordable=result["max_affordable"],
             )
             return  # Wait for client to send quantity
 
@@ -583,11 +648,32 @@ def _execute_next_action(game_id: str):
                 player_actions_done.setdefault(player.username, 0)
                 player_actions_done[player.username] += 1
                 meta["player_actions_done"] = player_actions_done
+                _record_move(
+                    game_id,
+                    player=player.username,
+                    action="failed_sell",
+                    market=market_num,
+                    product=market.location.product,
+                    dice_total=dice_total,
+                    dice_price=dice_price,
+                    reason=reason,
+                )
                 continue
             meta["can_sell"] = True
             meta["seller_qty"] = result["seller_qty"]
             meta["message"] = (
                 f"{player.username}: Sell condition met! Dice {dice_price} <= market {market.market_fixed_price}. You have {result['seller_qty']} units. Send POST /action with quantity."
+            )
+            _record_move(
+                game_id,
+                player=player.username,
+                action="roll",
+                market=market_num,
+                product=market.location.product,
+                dice_total=dice_total,
+                dice_price=dice_price,
+                can_sell=True,
+                seller_qty=result["seller_qty"],
             )
             return  # Wait for client to send quantity
 
@@ -697,6 +783,36 @@ def _execute_action(
     # Clear flags so next poll doesn't see stale values
     meta["can_buy"] = None
     meta["can_sell"] = None
+
+    # Record the executed trade so the UI can show what actually happened.
+    if action_label == "buy":
+        _record_move(
+            game_id,
+            player=player.username,
+            action="buy",
+            market=market_num,
+            product=result.get("product") or market.location.product,
+            dice_total=meta.get("dice_total"),
+            dice_price=dice_price,
+            quantity=result.get("units_bought", quantity),
+            unit_price=result.get("avg_price", market.market_fixed_price),
+            total=result.get("total_with_tax", 0),
+            balance=result.get("buyer_balance", player.balance),
+        )
+    else:
+        _record_move(
+            game_id,
+            player=player.username,
+            action="sell",
+            market=market_num,
+            product=result.get("product") or market.location.product,
+            dice_total=meta.get("dice_total"),
+            dice_price=dice_price,
+            quantity=result.get("quantity_sold", quantity),
+            unit_price=result.get("price_per_unit", dice_price),
+            total=result.get("net_revenue", 0),
+            balance=result.get("seller_balance", player.balance),
+        )
 
     _flush(game_id)
     append_history(

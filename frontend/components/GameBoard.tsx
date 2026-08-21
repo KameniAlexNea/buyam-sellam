@@ -13,6 +13,7 @@ import TurnTracker from "./TurnTracker";
 import HelpLink from "./HelpLink";
 import StrategyPanel from "./StrategyPanel";
 import ActionPanel from "./ActionPanel";
+import BotTurnPanel from "./BotTurnPanel";
 import ResultsPanel from "./ResultsPanel";
 import GameLog from "./GameLog";
 
@@ -226,13 +227,15 @@ export default function GameBoard({ gameId }: { gameId: string }) {
       />
     );
   } else if (game.phase === "action") {
-    center = (
+    center = isHumanTurn ? (
       <ActionPanel
         game={game}
         isHumanTurn={isHumanTurn}
         busy={busy}
         onExecute={executeAction}
       />
+    ) : (
+      <BotTurnPanel game={game} />
     );
   } else if (game.phase === "game_over") {
     center = (
