@@ -10,7 +10,7 @@ the full state is flushed to out/{game_id}/state.json.
 """
 
 import random
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from fastapi import APIRouter, HTTPException
 
@@ -45,8 +45,10 @@ from app.state_manager import (
     delete_game,
     list_games,
     load_history,
+    load_state,
     new_game_id,
     save_state,
+    _now,
 )
 
 # ---------------------------------------------------------------------------
@@ -130,28 +132,119 @@ def _game_state(game_id: str) -> GameStateResponse:
     )
 
 
-def _flush(game_id: str) -> None:
-    """Persist the current in-memory state to disk."""
-    table = _tables[game_id]
-    meta = _meta[game_id]
-    state = {
+# ---------------------------------------------------------------------------
+# Persistence: full serialize/deserialize so games can be lazily restored
+# from disk on first access (games survive backend restarts).
+# ---------------------------------------------------------------------------
+
+
+def _serialize_player(p: Player) -> Dict[str, Any]:
+    return {
+        "username": p.username,
+        "balance": p.balance,
+        "inventory": [
+            {
+                "product": {"name": it.product.name, "price": it.product.price},
+                "quantity": it.quantity,
+                "avg_cost": it.avg_cost,
+            }
+            for it in p.inventory
+        ],
+    }
+
+
+def _deserialize_player(data: Dict[str, Any]) -> Player:
+    from ksell.pojo.product import Product as _P  # noqa: PLC0415
+
+    user = User(username=data.get("username", ""))
+    player = Player(user=user)
+    player.balance = data.get("balance", 0.0)
+    for item in data.get("inventory", []):
+        prod = item.get("product", {})
+        pm = ProductModel(
+            product=_P(name=prod.get("name", ""), price=prod.get("price", 0)),
+            quantity=item.get("quantity", 0),
+            avg_cost=item.get("avg_cost", 0.0),
+        )
+        player.inventory.append(pm)
+    return player
+
+
+def _serialize_market(m: MarketBoard) -> Dict[str, Any]:
+    return {
+        "location": {
+            "id": m.location.id,
+            "name": m.location.name,
+            "min_qty": m.location.min_qty,
+            "max_qty": m.location.max_qty,
+            "tax_rate": m.location.tax_rate,
+            "product": m.location.product,
+            "fixed_price": m.location.fixed_price,
+        },
+        "market_fixed_price": m.market_fixed_price,
+        "last_purchase_price": m.last_purchase_price,
+        "pending_market_purchase": m.pending_market_purchase,
+        "price_history": m.price_history,
+        "net_flow": m.net_flow,
+        "market_supply": m.market_supply,
+        "sell_orders": m.sell_orders,
+        "completed_trades": m.completed_trades,
+        "selling_players": m.selling_players,
+        "total_qty": m.total_qty,
+        "remaining_qty": m.remaining_qty,
+        "passing_players": m.passing_players,
+    }
+
+
+def _deserialize_market(data: Dict[str, Any]) -> MarketBoard:
+    from ksell.pojo.market import Market as _Market  # noqa: PLC0415
+
+    loc_data = data.get("location", {})
+    loc = _Market(
+        id=loc_data.get("id", ""),
+        name=loc_data.get("name", ""),
+        min_qty=loc_data.get("min_qty", 50),
+        max_qty=loc_data.get("max_qty", 200),
+        tax_rate=loc_data.get("tax_rate", 0.05),
+        product=loc_data.get("product", ""),
+        fixed_price=loc_data.get("fixed_price", 1000),
+    )
+    m = MarketBoard(location=loc)
+    m.market_fixed_price = data.get("market_fixed_price", loc.fixed_price)
+    m.last_purchase_price = data.get("last_purchase_price")
+    m.pending_market_purchase = data.get("pending_market_purchase")
+    m.price_history = data.get("price_history", [m.market_fixed_price])
+    m.net_flow = data.get("net_flow", 0)
+    m.market_supply = data.get("market_supply", 0)
+    m.sell_orders = data.get("sell_orders", [])
+    m.completed_trades = data.get("completed_trades", [])
+    m.selling_players = data.get("selling_players", [])
+    m.total_qty = data.get("total_qty", m.market_supply)
+    m.remaining_qty = data.get("remaining_qty", m.total_qty)
+    m.passing_players = data.get("passing_players", [])
+    m.product = loc.product
+    return m
+
+
+def _serialize_game(game_id: str, table: Table, meta: Dict[str, Any]) -> Dict[str, Any]:
+    """Serialize the full in-memory game so it can be restored later."""
+    active_markets = meta.get("active_markets", [])
+    return {
         "game_id": game_id,
         "phase": meta["phase"],
         "round_number": meta.get("round_number", table.current_round),
         "total_rounds": table.total_rounds,
         "difficulty": meta.get("difficulty", "medium"),
-        "players": [_player_info(p).model_dump() for p in table.players],
+        "starting_balance": meta.get("starting_balance", 0),
+        "players": [_serialize_player(p) for p in table.players],
         "player_roles": meta.get("player_roles", {}),
-        "markets": [
-            _market_info(i, m).model_dump()
-            for i, m in enumerate(meta.get("active_markets", []), 1)
-        ],
-        "strategies_submitted": meta.get("strategies_submitted", []),
         "player_strategies": meta.get("player_strategies", {}),
+        "strategies_submitted": meta.get("strategies_submitted", []),
         "turn_order": meta.get("turn_order"),
         "current_player": meta.get("current_player"),
         "current_market_index": meta.get("current_market_index"),
         "action_index": meta.get("action_index", 0),
+        "player_actions_done": meta.get("player_actions_done", {}),
         "dice_total": meta.get("dice_total"),
         "dice_price": meta.get("dice_price"),
         "can_buy": meta.get("can_buy"),
@@ -161,9 +254,92 @@ def _flush(game_id: str) -> None:
         "action_failed": meta.get("action_failed"),
         "action_fail_reason": meta.get("action_fail_reason"),
         "message": meta.get("message", ""),
-        "starting_balance": meta.get("starting_balance", 0),
+        "move_feed": meta.get("move_feed", []),
+        "round_history": meta.get("round_history", []),
+        "created_at": meta.get("created_at", ""),
+        "current_round": table.current_round,
+        "markets": [_serialize_market(m) for m in table.markets],
+        "active_market_indexes": [
+            table.markets.index(m) for m in active_markets if m in table.markets
+        ],
     }
-    save_state(game_id, state)
+
+
+def _deserialize_game(state: Dict[str, Any]) -> Tuple[Table, Dict[str, Any]]:
+    """Rebuild a Table + meta from a persisted state dict."""
+    diff = None
+    if state.get("difficulty"):
+        diff = DifficultyConfig.from_difficulty(Difficulty(state["difficulty"]))
+    table = Table(
+        total_rounds=state.get("total_rounds", 10),
+        difficulty=diff,
+    )
+    table.current_round = state.get("current_round", state.get("round_number", 0))
+    table.markets = [_deserialize_market(m) for m in state.get("markets", [])]
+    for pd in state.get("players", []):
+        table.add_player(_deserialize_player(pd))
+
+    active_markets = [
+        table.markets[i]
+        for i in state.get("active_market_indexes", [])
+        if 0 <= i < len(table.markets)
+    ]
+    meta: Dict[str, Any] = {
+        "phase": state.get("phase", "created"),
+        "round_number": state.get("round_number", table.current_round),
+        "total_rounds": table.total_rounds,
+        "starting_balance": state.get("starting_balance", 0),
+        "difficulty": state.get("difficulty", "medium"),
+        "strategies_submitted": state.get("strategies_submitted", []),
+        "player_strategies": state.get("player_strategies", {}),
+        "player_roles": state.get("player_roles", {}),
+        "turn_order": state.get("turn_order"),
+        "current_player": state.get("current_player"),
+        "current_market_index": state.get("current_market_index"),
+        "action_index": state.get("action_index", 0),
+        "player_actions_done": state.get("player_actions_done", {}),
+        "dice_total": state.get("dice_total"),
+        "dice_price": state.get("dice_price"),
+        "can_buy": state.get("can_buy"),
+        "can_sell": state.get("can_sell"),
+        "max_affordable": state.get("max_affordable"),
+        "seller_qty": state.get("seller_qty"),
+        "action_failed": state.get("action_failed"),
+        "action_fail_reason": state.get("action_fail_reason"),
+        "message": state.get("message", ""),
+        "move_feed": state.get("move_feed", []),
+        "round_history": state.get("round_history", []),
+        "created_at": state.get("created_at", ""),
+        "active_markets": active_markets,
+    }
+    return table, meta
+
+
+def _ensure_loaded(game_id: str) -> None:
+    """Lazily load a game from disk into memory if it isn't already there.
+
+    This is what makes games survive a backend restart: the first request that
+    touches a game reads its state.json and rebuilds the in-memory Table. Games
+    that were never persisted (or were deleted) stay 404.
+    """
+    if game_id in _tables:
+        return
+    state = load_state(game_id)
+    if not state:
+        raise HTTPException(status_code=404, detail="Game not found")
+    try:
+        table, meta = _deserialize_game(state)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Game state is unreadable")
+    _tables[game_id] = table
+    _meta[game_id] = meta
+
+
+def _flush(game_id: str) -> None:
+    """Persist the current in-memory state to disk."""
+    table = _tables[game_id]
+    meta = _meta[game_id]
+    save_state(game_id, _serialize_game(game_id, table, meta))
 
 
 def _check_phase(game_id: str, *allowed: GamePhase) -> None:
@@ -223,6 +399,7 @@ def create_game(req: CreateGameRequest):
         "current_market_index": None,
         "action_index": 0,
         "move_feed": [],
+        "created_at": _now(),
         "message": "Game created. Add players with POST /games/{id}/players",
     }
     append_history(
@@ -244,15 +421,13 @@ def list_games_endpoint() -> GameListResponse:
 
 @router.get("/{game_id}", summary="Get game state")
 def get_game(game_id: str) -> GameStateResponse:
-    if game_id not in _tables:
-        raise HTTPException(status_code=404, detail="Game not found")
+    _ensure_loaded(game_id)
     return _game_state(game_id)
 
 
 @router.delete("/{game_id}", summary="Delete a game")
 def delete_game_endpoint(game_id: str):
-    if game_id not in _tables:
-        raise HTTPException(status_code=404, detail="Game not found")
+    _ensure_loaded(game_id)
     del _tables[game_id]
     del _meta[game_id]
     delete_game(game_id)
@@ -266,6 +441,7 @@ def delete_game_endpoint(game_id: str):
 
 @router.post("/{game_id}/players", summary="Add a player")
 def add_player(game_id: str, req: AddPlayerRequest):
+    _ensure_loaded(game_id)
     _check_phase(game_id, GamePhase.CREATED, GamePhase.SETUP)
     table = _tables[game_id]
 
@@ -307,6 +483,7 @@ def add_player(game_id: str, req: AddPlayerRequest):
 
 @router.post("/{game_id}/start", summary="Start the game")
 def start_game(game_id: str):
+    _ensure_loaded(game_id)
     _check_phase(game_id, GamePhase.SETUP)
     table = _tables[game_id]
 
@@ -447,6 +624,7 @@ def _apply_submitted_strategy(
 
 @router.post("/{game_id}/strategy", summary="Submit a player's strategy")
 def submit_strategy(game_id: str, req: SubmitStrategyRequest):
+    _ensure_loaded(game_id)
     _check_phase(game_id, GamePhase.STRATEGY)
     parsed = _validate_strategy(game_id, req.username, req.strategy)
     _apply_submitted_strategy(game_id, req.username, parsed)
@@ -462,6 +640,7 @@ def submit_strategy(game_id: str, req: SubmitStrategyRequest):
 
 @router.post("/{game_id}/bot-strategy", summary="Compute & submit a bot's strategy")
 def submit_bot_strategy(game_id: str, req: BotStrategyRequest):
+    _ensure_loaded(game_id)
     _check_phase(game_id, GamePhase.STRATEGY)
     table = _tables[game_id]
     meta = _meta[game_id]
@@ -850,6 +1029,7 @@ def _execute_action(
     "/{game_id}/action", summary="Execute the current action (buy/sell with quantity)"
 )
 def execute_action(game_id: str, req: ExecuteActionRequest):
+    _ensure_loaded(game_id)
     _check_phase(game_id, GamePhase.ACTION)
     return _execute_action(game_id, req.quantity, actor="human")
 
@@ -859,6 +1039,7 @@ def execute_action(game_id: str, req: ExecuteActionRequest):
     summary="Execute the current action for an AI bot (auto quantity)",
 )
 def execute_bot_action(game_id: str, req: BotActionRequest):
+    _ensure_loaded(game_id)
     _check_phase(game_id, GamePhase.ACTION)
     meta = _meta[game_id]
 
@@ -926,6 +1107,7 @@ def _end_current_round(game_id: str):
 
 @router.get("/{game_id}/results", summary="Get final results")
 def get_results(game_id: str):
+    _ensure_loaded(game_id)
     _check_phase(game_id, GamePhase.GAME_OVER)
     table = _tables[game_id]
     meta = _meta[game_id]
@@ -999,6 +1181,5 @@ def get_results(game_id: str):
 
 @router.get("/{game_id}/history", summary="Get the game's event history")
 def get_history(game_id: str):
-    if game_id not in _tables:
-        raise HTTPException(status_code=404, detail="Game not found")
+    _ensure_loaded(game_id)
     return {"game_id": game_id, "history": load_history(game_id)}
