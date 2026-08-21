@@ -329,39 +329,8 @@ export default function StrategyDashboard({
         </div>
       </div>
 
-      {/* ---------- CENTER: dice guide + trades + summary ---------- */}
+      {/* ---------- CENTER: trades + summary ---------- */}
       <div className="flex flex-col gap-4">
-        {/* Next roll */}
-        <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3 text-center">
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">
-            Your next roll (2d6)
-          </p>
-          <p className="mt-1 font-display text-xl font-black text-gold">2–12</p>
-          <p className="text-[11px] text-bright">200 – 1,200 FCFA</p>
-          <p className="text-[10px] text-dim">dice price = total × 100 FCFA</p>
-
-          {/* Probability guide bars */}
-          <p className="mt-3 font-display text-[9px] font-bold uppercase tracking-[0.3em] text-dim">
-            Probability guide (2d6)
-          </p>
-          <div className="mt-1.5 flex items-end justify-center gap-0.5">
-            {DIST.map((d) => (
-              <div key={d.roll} className="flex flex-col items-center gap-0.5">
-                <span className="text-[8px] font-bold text-dim">
-                  {Math.round(d.prob * 100).toFixed(1).replace(".0", "")}%
-                </span>
-                <div
-                  className={`w-4 rounded-sm ${d.roll === 7 ? "bg-gold" : "bg-cyan/50"}`}
-                  style={{ height: `${Math.max(4, d.prob * 110)}px` }}
-                />
-                <span className={`text-[8px] font-bold ${d.roll === 7 ? "text-gold" : "text-dim"}`}>
-                  {d.roll}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Trade cards */}
         <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3">
           <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">
@@ -442,39 +411,56 @@ export default function StrategyDashboard({
 
       {/* ---------- RIGHT: players + rules + inventory ---------- */}
       <div className="flex flex-col gap-4">
-        {/* Players */}
+        {/* Players — ranked by cash so you can see who's winning */}
         <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3">
           <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">
             Players
           </p>
           <div className="mt-2 flex flex-col gap-1">
-            {players.map((p, i) => {
-              const c = colorOf(p.username);
-              const submitted = game.strategies_submitted.includes(p.username);
-              const isPlanner = p.username === planner;
-              const isHuman = humanPlayers.includes(p.username);
-              return (
-                <div
-                  key={p.username}
-                  className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-[11px] ${
-                    isPlanner
-                      ? "border-gold/40 bg-gold/5"
-                      : "border-[rgba(100,180,255,0.08)] bg-board/40"
-                  }`}
-                >
-                  <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-black ${c.avatar}`}>
-                    {p.username.slice(0, 1).toUpperCase()}
-                  </span>
-                  <span className={`truncate font-semibold ${isPlanner ? c.text : "text-bright"}`}>
-                    {p.username}
-                  </span>
-                  {isHuman && <span className="text-[8px] font-bold text-gold/80">YOU</span>}
-                  <span className="ml-auto font-black">
-                    {submitted ? "✓" : isPlanner ? "◌" : "…"}
-                  </span>
-                </div>
-              );
-            })}
+            {[...players]
+              .sort((a, b) => b.balance - a.balance)
+              .map((p, i) => {
+                const c = colorOf(p.username);
+                const submitted = game.strategies_submitted.includes(p.username);
+                const isPlanner = p.username === planner;
+                const isHuman = humanPlayers.includes(p.username);
+                const rank = i + 1;
+                const rankCls =
+                  rank === 1
+                    ? "bg-gold text-deep"
+                    : rank === 2
+                    ? "bg-dim/80 text-white"
+                    : rank === 3
+                    ? "bg-amberc/70 text-deep"
+                    : "bg-board text-dim";
+                return (
+                  <div
+                    key={p.username}
+                    className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-[11px] ${
+                      isPlanner
+                        ? "border-gold/40 bg-gold/5"
+                        : "border-[rgba(100,180,255,0.08)] bg-board/40"
+                    }`}
+                  >
+                    <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-black ${rankCls}`}>
+                      {rank}
+                    </span>
+                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-black ${c.avatar}`}>
+                      {p.username.slice(0, 1).toUpperCase()}
+                    </span>
+                    <span className={`truncate font-semibold ${isPlanner ? c.text : "text-bright"}`}>
+                      {p.username}
+                    </span>
+                    {isHuman && <span className="text-[8px] font-bold text-gold/80">YOU</span>}
+                    <span className="ml-auto shrink-0 font-display font-bold text-cyan">
+                      {moneyShort(p.balance)}
+                    </span>
+                    <span className="shrink-0 font-black">
+                      {submitted ? "✓" : isPlanner ? "◌" : "…"}
+                    </span>
+                  </div>
+                );
+              })}
           </div>
         </div>
 
@@ -495,6 +481,37 @@ export default function StrategyDashboard({
             <p>
               <span className="font-black text-dim">SKIP</span> — do nothing at this market.
             </p>
+          </div>
+        </div>
+
+        {/* Your next roll + probability guide */}
+        <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3 text-center">
+          <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">
+            Your next roll (2d6)
+          </p>
+          <p className="mt-1 font-display text-xl font-black text-gold">2–12</p>
+          <p className="text-[11px] text-bright">200 – 1,200 FCFA</p>
+          <p className="text-[10px] text-dim">dice price = total × 100 FCFA</p>
+
+          {/* Probability guide bars */}
+          <p className="mt-3 font-display text-[9px] font-bold uppercase tracking-[0.3em] text-dim">
+            Probability guide (2d6)
+          </p>
+          <div className="mt-1.5 flex items-end justify-center gap-0.5">
+            {DIST.map((d) => (
+              <div key={d.roll} className="flex flex-col items-center gap-0.5">
+                <span className="text-[8px] font-bold text-dim">
+                  {Math.round(d.prob * 100).toFixed(1).replace(".0", "")}%
+                </span>
+                <div
+                  className={`w-4 rounded-sm ${d.roll === 7 ? "bg-gold" : "bg-cyan/50"}`}
+                  style={{ height: `${Math.max(4, d.prob * 110)}px` }}
+                />
+                <span className={`text-[8px] font-bold ${d.roll === 7 ? "text-gold" : "text-dim"}`}>
+                  {d.roll}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 

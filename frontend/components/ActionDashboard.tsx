@@ -383,7 +383,9 @@ function PlayerSideBar({
 }
 
 function PlayersSideBar({ game, actor }: { game: GameState; actor: string }) {
-  const others = game.players.filter((p) => p.username !== actor);
+  const others = [...game.players]
+    .filter((p) => p.username !== actor)
+    .sort((a, b) => b.balance - a.balance);
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3">
