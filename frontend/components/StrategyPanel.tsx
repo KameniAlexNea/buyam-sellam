@@ -22,9 +22,9 @@ interface StrategyPanelProps {
 }
 
 const ACTIONS: { value: MarketAction; label: string; icon: string; active: string }[] = [
-  { value: "buy", label: "Buy", icon: "⬇", active: "bg-buy/25 border-buy text-buy" },
-  { value: "sell", label: "Sell", icon: "⬆", active: "bg-sell/25 border-sell text-sell" },
-  { value: "skip", label: "Skip", icon: "—", active: "bg-dim/25 border-dim text-dim" },
+  { value: "buy", label: "Buy", icon: "⬇", active: "bg-buy text-deep border-buy shadow-[0_0_14px_rgba(0,230,138,0.4)]" },
+  { value: "sell", label: "Sell", icon: "⬆", active: "bg-sell text-white border-sell shadow-[0_0_14px_rgba(255,77,106,0.4)]" },
+  { value: "skip", label: "Skip", icon: "—", active: "bg-dim/70 text-white border-dim/70" },
 ];
 
 /** Tiny likelihood dot: green = likely, amber = risky, red = unlikely. */
@@ -81,7 +81,8 @@ export default function StrategyPanel({
             {plannerPlayer.inventory.map((it) => (
               <span key={it.product.name} className="mx-0.5">
                 {productMeta(it.product.name).icon}
-                {it.quantity}
+                {it.quantity}{" "}
+                <span className="text-dim/70">{it.product.name}</span>
               </span>
             ))}
           </p>
@@ -131,7 +132,7 @@ export default function StrategyPanel({
                 </div>
               </div>
 
-              {/* Dice window */}
+              {/* Dice window + cost preview */}
               <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px]">
                 <p className="flex items-center gap-1.5">
                   <span className={sel === "buy" ? "text-buy" : "text-buy/70"}>
@@ -144,6 +145,16 @@ export default function StrategyPanel({
                 </p>
                 <span className="text-dim">
                   you own <b className={canSell ? "text-bright" : "text-dim"}>{owned}</b>
+                </span>
+              </div>
+
+              {/* Cost / proceeds preview so players don't do the math themselves */}
+              <div className="mt-1 flex flex-wrap items-center justify-between gap-1 rounded-md border border-[rgba(100,180,255,0.08)] bg-board/40 px-2 py-1 text-[10px]">
+                <span className="text-buy/90">
+                  💰 buy ≈ {money(m.market_fixed_price)} + {Math.round(m.tax_rate * 100)}% tax
+                </span>
+                <span className="text-sell/90">
+                  sell ≈ {money(sellRoll * 100)} − {Math.round(m.tax_rate * 100)}% − {moneyShort(m.sell_entry_fee)} fee
                 </span>
               </div>
 
@@ -163,14 +174,14 @@ export default function StrategyPanel({
                           ? `${planner} doesn't have ${m.product} in inventory`
                           : undefined
                       }
-                      className={`rounded-md border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide transition-all ${
-                        selected
-                          ? a.active
-                          : "border-[rgba(100,180,255,0.12)] bg-card text-dim hover:text-bright"
-                      } ${disabled ? "cursor-not-allowed opacity-30" : ""}`}
-                    >
-                      {a.icon} {a.label}
-                    </button>
+                  className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide transition-all ${
+                    selected
+                      ? a.active
+                      : "border-[rgba(100,180,255,0.12)] bg-card text-dim hover:text-bright"
+                  } ${disabled ? "cursor-not-allowed opacity-30" : ""}`}
+                >
+                  {selected ? "✓" : a.icon} {a.label}
+                </button>
                   );
                 })}
               </div>

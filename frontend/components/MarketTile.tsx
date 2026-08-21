@@ -57,7 +57,12 @@ export default function MarketTile({
           orientation === "horizontal" ? "h-full min-h-[4.5rem]" : "w-full min-w-[4.5rem] min-h-full"
         }`}
       >
-        <span className="text-lg text-[rgba(100,180,255,0.18)]">◆</span>
+        <div className="flex flex-col items-center gap-1 px-1 text-center">
+          <span className="text-base text-[rgba(100,180,255,0.18)]">◆</span>
+          <span className="text-[8px] font-semibold uppercase tracking-wider text-[rgba(100,180,255,0.22)]">
+            {orientation === "horizontal" ? "No market this round" : "No market"}
+          </span>
+        </div>
       </div>
     );
   }

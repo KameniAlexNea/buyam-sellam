@@ -11,9 +11,9 @@ import { buildSavedGame, clearGame, saveGame } from "@/lib/storage";
 import Board from "./Board";
 import TurnTracker from "./TurnTracker";
 import HelpLink from "./HelpLink";
-import StrategyPanel from "./StrategyPanel";
 import ActionPanel from "./ActionPanel";
 import BotTurnPanel from "./BotTurnPanel";
+import StrategyDashboard from "./StrategyDashboard";
 import ResultsPanel from "./ResultsPanel";
 import GameLog from "./GameLog";
 
@@ -204,29 +204,7 @@ export default function GameBoard({ gameId }: { gameId: string }) {
   };
 
   let center: React.ReactNode;
-  if (game.phase === "strategy" && canSubmitStrategy) {
-    center = (
-      <StrategyPanel
-        markets={game.markets}
-        planner={currentPlanner ?? ""}
-        plannerPlayer={plannerPlayer}
-        choices={choices}
-        onChoice={onChoice}
-        busy={busy}
-        onConfirm={confirmStrategy}
-      />
-    );
-  } else if (game.phase === "strategy") {
-    center = (
-      <Waiting
-        text={
-          botsStrategizing
-            ? "Waiting for the bots to plan…"
-            : "All plans are in — resolving the round…"
-        }
-      />
-    );
-  } else if (game.phase === "action") {
+  if (game.phase === "action") {
     center = isHumanTurn ? (
       <ActionPanel
         game={game}
@@ -284,8 +262,10 @@ export default function GameBoard({ gameId }: { gameId: string }) {
         </div>
       </header>
 
-      {/* Whose turn is it — shown on the strategy & action phases */}
-      {["strategy", "action"].includes(game.phase) && (
+      {/* Whose turn is it — the action phase shows dice turn order; the
+          strategy phase already shows player/planning status in the dashboard's
+          right "Players" panel, so the ribbon would only duplicate it. */}
+      {game.phase === "action" && (
         <TurnTracker
           game={game}
           currentPlanner={currentPlanner}
@@ -300,20 +280,34 @@ export default function GameBoard({ gameId }: { gameId: string }) {
         </p>
       )}
 
-      {/* The board */}
-      <Board
-        players={game.players}
-        playerRoles={game.player_roles}
-        markets={game.markets}
-        phase={game.phase}
-        humanPlayers={humanPlayers}
-        currentPlayer={game.current_player}
-        currentPlanner={currentPlanner}
-        currentMarketIndex={game.current_market_index}
-        choices={choices}
-        onMarketTap={onMarketTap}
-        center={center}
-      />
+      {/* Strategy phase = full planning dashboard (3 columns) */}
+      {game.phase === "strategy" ? (
+        <StrategyDashboard
+          game={game}
+          planner={currentPlanner ?? ""}
+          plannerPlayer={plannerPlayer}
+          humanPlayers={humanPlayers}
+          choices={choices}
+          onChoice={onChoice}
+          busy={busy}
+          canSubmit={canSubmitStrategy}
+          onConfirm={confirmStrategy}
+        />
+      ) : (
+        <Board
+          players={game.players}
+          playerRoles={game.player_roles}
+          markets={game.markets}
+          phase={game.phase}
+          humanPlayers={humanPlayers}
+          currentPlayer={game.current_player}
+          currentPlanner={currentPlanner}
+          currentMarketIndex={game.current_market_index}
+          choices={choices}
+          onMarketTap={onMarketTap}
+          center={center}
+        />
+      )}
 
       {/* Optional event log */}
       {showLog && (
