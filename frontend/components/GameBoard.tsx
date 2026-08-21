@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import type { Difficulty, MarketAction, Results } from "@/lib/types";
@@ -10,7 +9,7 @@ import { DIFFICULTY_META, phaseLabel } from "@/lib/format";
 import { buildSavedGame, clearGame, saveGame } from "@/lib/storage";
 import Board from "./Board";
 import TurnTracker from "./TurnTracker";
-import HelpLink from "./HelpLink";
+import GameHeader from "./GameHeader";
 import ActionPanel from "./ActionPanel";
 import BotTurnPanel from "./BotTurnPanel";
 import StrategyDashboard from "./StrategyDashboard";
@@ -234,25 +233,20 @@ export default function GameBoard({ gameId }: { gameId: string }) {
 
   return (
     <Shell>
-      {/* Header */}
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <Link
-          href="/"
-          className="rounded-lg border border-[rgba(100,180,255,0.2)] bg-card/60 px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-dim transition-colors hover:border-gold/40 hover:text-gold"
-        >
-          ← Lobby
-        </Link>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-lg bg-card/60 px-3 py-1.5 font-display text-xs font-bold uppercase tracking-widest text-gold border border-gold/20">
-            Round {game.round_number} / {game.total_rounds}
-          </span>
-          <span className={`rounded-lg border px-3 py-1.5 font-display text-xs font-bold uppercase tracking-widest ${diff.tone}`}>
-            {diff.label}
-          </span>
-          <span className="rounded-lg border border-[rgba(100,180,255,0.2)] bg-card/60 px-3 py-1.5 font-display text-xs font-bold uppercase tracking-widest text-cyan">
-            {phaseLabel(game.phase)}
-          </span>
-          <HelpLink />
+      {/* Game-style header: back left, title center, badges + controls right */}
+      <GameHeader
+        subtitle={phaseLabel(game.phase)}
+        badges={
+          <>
+            <span className="rounded-lg bg-card/60 px-3 py-1.5 font-display text-xs font-bold uppercase tracking-widest text-gold border border-gold/20">
+              Round {game.round_number} / {game.total_rounds}
+            </span>
+            <span className={`rounded-lg border px-3 py-1.5 font-display text-xs font-bold uppercase tracking-widest ${diff.tone}`}>
+              {diff.label}
+            </span>
+          </>
+        }
+        actions={
           <button
             type="button"
             onClick={() => setShowLog((v) => !v)}
@@ -260,8 +254,8 @@ export default function GameBoard({ gameId }: { gameId: string }) {
           >
             {showLog ? "Hide" : "📜"} Log
           </button>
-        </div>
-      </header>
+        }
+      />
 
       {/* Whose turn is it — the action phase shows dice turn order; the
           strategy phase already shows player/planning status in the dashboard's
