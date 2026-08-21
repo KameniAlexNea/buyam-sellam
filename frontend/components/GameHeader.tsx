@@ -10,6 +10,8 @@ interface GameHeaderProps {
   actions?: React.ReactNode;
   /** Show the ← Lobby back link (default true). */
   back?: boolean;
+  /** Show the ❓ Help link (default true; hide on the help page itself). */
+  help?: boolean;
   /** Small subtitle under the title (e.g. the phase). */
   subtitle?: string;
 }
@@ -23,6 +25,7 @@ export default function GameHeader({
   badges,
   actions,
   back = true,
+  help = true,
   subtitle,
 }: GameHeaderProps) {
   return (
@@ -55,7 +58,7 @@ export default function GameHeader({
       {/* Right: controls */}
       <div className="flex items-center gap-2">
         {actions}
-        <HelpLink />
+        {help && <HelpLink />}
       </div>
     </header>
   );

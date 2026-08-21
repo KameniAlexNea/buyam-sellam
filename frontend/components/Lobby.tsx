@@ -190,13 +190,12 @@ export default function Lobby() {
         <span className="font-display text-[11px] font-bold uppercase tracking-[0.4em] text-gold">
           🎲 Marketplace Trading Game
         </span>
-        <h1 className="text-shimmer mt-4 font-display text-5xl font-black uppercase tracking-wider sm:text-7xl">
-          Buyam-Sellam
-        </h1>
+        <p className="text-shimmer mx-auto mt-4 max-w-2xl font-display text-2xl font-black uppercase tracking-wider sm:text-3xl">
+          Roll the dice, read the markets, trade your way to riches.
+        </p>
         <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-dim sm:text-base">
-          Roll the dice, read the markets, and trade your way to riches. Buy low,
-          sell high, pay your taxes — and out-trade your rivals for the highest
-          balance.
+          Buy low, sell high, pay your taxes — and out-trade your rivals for the
+          highest balance.
         </p>
         <div className="mt-6 flex items-center justify-center gap-3">
           <Dice die1={4} die2={5} total={9} label="" size="lg" rolling />

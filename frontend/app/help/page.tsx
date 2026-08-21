@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import HelpContent from "@/components/HelpContent";
+import GameHeader from "@/components/GameHeader";
 
 export const metadata: Metadata = {
   title: "How to Play — Buyam-Sellam",
@@ -10,22 +11,7 @@ export const metadata: Metadata = {
 export default function HelpPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6">
-      <header className="flex items-center justify-between gap-3">
-        <div>
-          <span className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">
-            Buyam-Sellam
-          </span>
-          <h1 className="text-shimmer mt-1 font-display text-2xl font-black uppercase tracking-wide sm:text-3xl">
-            How to play
-          </h1>
-        </div>
-        <Link
-          href="/"
-          className="shrink-0 rounded-lg border border-[rgba(100,180,255,0.2)] bg-card/60 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-dim transition-colors hover:border-gold/40 hover:text-gold"
-        >
-          ← Back
-        </Link>
-      </header>
+      <GameHeader subtitle="How to play" help={false} />
 
       <HelpContent />
 
