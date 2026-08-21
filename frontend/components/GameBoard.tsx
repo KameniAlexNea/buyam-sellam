@@ -7,7 +7,7 @@ import { api, ApiError } from "@/lib/api";
 import type { Difficulty, MarketAction, Results } from "@/lib/types";
 import { useGameState } from "@/lib/useGameState";
 import { DIFFICULTY_META, phaseLabel } from "@/lib/format";
-import { buildSavedGame, saveGame } from "@/lib/storage";
+import { buildSavedGame, clearGame, saveGame } from "@/lib/storage";
 import Board from "./Board";
 import TurnTracker from "./TurnTracker";
 import HelpLink from "./HelpLink";
@@ -24,6 +24,7 @@ export default function GameBoard({ gameId }: { gameId: string }) {
     history,
     loading,
     error,
+    notFound,
     humanPlayers,
     isHuman,
     currentPlanner,
@@ -43,6 +44,12 @@ export default function GameBoard({ gameId }: { gameId: string }) {
   const router = useRouter();
 
   const gameOver = game?.phase === "game_over";
+
+  // The game no longer exists on the server (backend restart wiped the
+  // in-memory state). Drop the stale save and let the player start fresh.
+  useEffect(() => {
+    if (notFound) clearGame();
+  }, [notFound]);
 
   // Fetch final results once the game ends.
   useEffect(() => {
@@ -69,6 +76,30 @@ export default function GameBoard({ gameId }: { gameId: string }) {
   useEffect(() => {
     if (showLog) refreshHistory();
   }, [showLog, game?.round_number, game?.phase, refreshHistory]);
+
+  if (notFound) {
+    return (
+      <Shell>
+        <div className="mx-auto max-w-md rounded-2xl border border-dim/30 bg-card p-8 text-center shadow-card">
+          <p className="text-3xl">🕳️</p>
+          <h2 className="mt-3 font-display text-lg font-bold uppercase">
+            This game is gone
+          </h2>
+          <p className="mt-2 text-sm text-dim">
+            The game server was restarted and the game state was lost. Start a
+            new game from the lobby.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push("/")}
+            className="mt-5 rounded-xl bg-gold px-6 py-2 font-display text-sm font-bold uppercase tracking-widest text-deep"
+          >
+            ← Back to Lobby
+          </button>
+        </div>
+      </Shell>
+    );
+  }
 
   if (loading && !game) {
     return (

@@ -56,7 +56,7 @@ export const api = {
   strategies: () => request<StrategyInfo[]>("/strategies"),
 
   createGame: (body: {
-    starting_balance: number;
+    starting_balance?: number;
     total_rounds: number;
     difficulty: Difficulty;
   }) =>

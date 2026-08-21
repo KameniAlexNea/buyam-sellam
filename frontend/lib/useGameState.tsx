@@ -4,7 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "./api";
 import type { GameState, HistoryEntry, MarketAction } from "./types";
 
-const POLL_MS = 900;
+const POLL_MS = 900; // poll while a bot needs driving
+
+// Polling is strictly action-driven: requests are only made while a bot is
+// being driven. When it's a human's turn (or any state where nothing can
+// change until the player acts), zero requests are sent.
 
 export interface StrategyChoice {
   market_index: number;
@@ -16,6 +20,8 @@ export interface UseGameState {
   history: HistoryEntry[];
   loading: boolean;
   error: string | null;
+  /** true when the game no longer exists on the server (404). */
+  notFound: boolean;
   /** usernames of all human-controlled players. */
   humanPlayers: string[];
   isHuman: (username: string) => boolean;
@@ -46,6 +52,28 @@ function botStrategy(game: GameState, username: string): string {
 }
 
 /**
+ * True when a bot still needs driving (strategy to submit or action to take),
+ * i.e. when fast polling actually does something. On a human's turn nothing
+ * can change server-side until the human acts, so fast polling is waste.
+ */
+function needsLivePolling(game: GameState | null): boolean {
+  if (!game) return true;
+  if (game.phase === "strategy") {
+    // Bots still planning -> they must be driven forward.
+    return game.players.some(
+      (p) => isBot(game, p.username) && !game.strategies_submitted.includes(p.username)
+    );
+  }
+  if (game.phase === "action") {
+    // A bot whose buy/sell is due -> drive it.
+    return !!game.current_player && isBot(game, game.current_player);
+  }
+  // Human's turn, transition, waiting, or game over: nothing moves on its
+  // own, so there is nothing to poll for.
+  return false;
+}
+
+/**
  * Polls the backend for a game, automatically submits strategies for bot
  * players and executes their buy/sell actions, and exposes helpers so every
  * human player (hot-seat) can submit their own strategy and act on their turn.
@@ -55,6 +83,7 @@ export function useGameState(gameId: string): UseGameState {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const gameRef = useRef<GameState | null>(null);
@@ -64,6 +93,7 @@ export function useGameState(gameId: string): UseGameState {
     const next = await api.getGame(gameId);
     gameRef.current = next;
     setGame(next);
+    setNotFound(false);
     setError(null);
     setLoading(false);
   }, [gameId]);
@@ -74,47 +104,53 @@ export function useGameState(gameId: string): UseGameState {
     if (hist) setHistory(hist.history);
   }, [gameId]);
 
-  // Drive bots: submit pending bot strategies, then execute bot actions.
+  // Drive bots: keep executing consecutive bot steps (submit pending bot
+  // strategies, then bot buy/sell actions) until it's a human's turn again or
+  // there is nothing left to drive. This is the ONLY thing that should ever
+  // trigger requests outside of a human explicitly acting.
   const drive = useCallback(async () => {
-    const g = gameRef.current;
-    if (!g || driving.current) return;
+    if (driving.current) return;
     driving.current = true;
     setBusy(true);
     try {
-      if (g.phase === "strategy") {
-        const pending = g.players.find(
-          (p) => isBot(g, p.username) && !g.strategies_submitted.includes(p.username)
-        );
-        if (pending) {
+      while (needsLivePolling(gameRef.current)) {
+        const g = gameRef.current;
+        if (!g) break;
+
+        if (g.phase === "strategy") {
+          const pending = g.players.find(
+            (p) => isBot(g, p.username) && !g.strategies_submitted.includes(p.username)
+          );
+          if (!pending) break;
           const strat = botStrategy(g, pending.username);
           if (!strat) {
-            // Bot has no strategy assigned yet — wait for the backend.
-            await refresh();
-            return;
+            // Bot has no strategy assigned yet — wait for the poll loop.
+            break;
           }
           await api.submitBotStrategy(g.game_id, {
             username: pending.username,
             strategy_name: strat,
           });
           await refresh();
-          return;
+          continue;
         }
-      }
 
-      if (g.phase === "action") {
-        const cur = g.current_player;
-        if (cur && isBot(g, cur) && (g.can_buy || g.can_sell)) {
+        if (g.phase === "action") {
+          const cur = g.current_player;
+          if (!cur || !isBot(g, cur) || !(g.can_buy || g.can_sell)) break;
           const strat = botStrategy(g, cur);
           if (!strat) {
-            await refresh();
-            return;
+            break;
           }
           await api.executeBotAction(g.game_id, {
             strategy_name: strat,
           });
           await refresh();
-          return;
+          continue;
         }
+
+        // Any other phase — nothing to drive.
+        break;
       }
     } catch (e) {
       if (e instanceof ApiError && e.status === 400) {
@@ -127,34 +163,58 @@ export function useGameState(gameId: string): UseGameState {
     }
   }, [refresh]);
 
-  // Polling loop.
+  // Polling loop: requests happen ONLY while a bot needs driving. As soon as
+  // it's a human's turn, scheduling stops -> zero requests. A human acting
+  // (submitStrategy / executeAction) re-triggers refresh + drive, which resumes
+  // bot-driving until it's back to a human turn. Hidden tab = zero requests.
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
+    const schedule = (ms: number) => {
+      if (!cancelled) timer = setTimeout(tick, ms);
+    };
+
     const tick = async () => {
       if (cancelled) return;
+      // Never poll a hidden tab.
+      if (typeof document !== "undefined" && document.hidden) return;
       try {
         await refresh();
         await drive();
       } catch (e) {
         if (!cancelled) {
           setLoading(false);
+          if (e instanceof ApiError && e.status === 404) {
+            // The game was wiped (backend restart, etc.) — stop polling it.
+            setNotFound(true);
+            return; // do NOT reschedule
+          }
           setError(
             e instanceof ApiError
               ? e.message
               : "Something went wrong talking to the game server."
           );
         }
-      } finally {
-        if (!cancelled) timer = setTimeout(tick, POLL_MS);
+      }
+      // Only keep polling if there is actually bot work left to do.
+      if (needsLivePolling(gameRef.current)) schedule(POLL_MS);
+    };
+
+    const onVisibility = () => {
+      // Tab came back into view — refresh once and resume if bots need driving.
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        if (timer) clearTimeout(timer);
+        tick();
       }
     };
 
     tick();
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       cancelled = true;
       if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [refresh, drive]);
 
@@ -213,6 +273,7 @@ export function useGameState(gameId: string): UseGameState {
     history,
     loading,
     error,
+    notFound,
     humanPlayers,
     isHuman,
     currentPlanner,
