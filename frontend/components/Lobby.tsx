@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import type { Difficulty, StrategyInfo } from "@/lib/types";
 import { buildSavedGame, clearGame, loadGame, saveGame, type SavedGame } from "@/lib/storage";
-import Dice from "./Dice";
 import GameHeader from "./GameHeader";
 
 const DIFFICULTIES: { value: Difficulty; label: string; blurb: string; cash: number; active: string }[] = [
@@ -187,20 +186,30 @@ export default function Lobby() {
       <GameHeader back={false} subtitle="New Game" />
 
       {/* Hero */}
-      <section className="relative overflow-hidden rounded-3xl border-2 border-gold/20 bg-gradient-to-br from-card via-board to-deep px-6 py-12 text-center shadow-card">
-        <span className="font-display text-[11px] font-bold uppercase tracking-[0.4em] text-gold">
-          🎲 Marketplace Trading Game
-        </span>
-        <p className="text-shimmer mx-auto mt-4 max-w-2xl font-display text-2xl font-black uppercase tracking-wider sm:text-3xl">
-          Roll the dice, read the markets, trade your way to riches.
+      <section
+        className="relative overflow-hidden rounded-3xl border-2 border-gold/20 bg-gradient-to-br from-card via-board to-deep px-6 py-12 text-center shadow-card"
+        style={{
+          backgroundImage:
+            "url(/bg-pattern.svg), radial-gradient(ellipse at 50% 0%, rgba(255,204,0,0.08), transparent 60%)",
+        }}
+      >
+        <img
+          src="/logo-mark.svg"
+          alt=""
+          className="mx-auto h-28 w-28 sm:h-32 sm:w-32"
+          style={{ filter: "drop-shadow(0 0 20px rgba(255,204,0,0.35))" }}
+        />
+        <h1 className="mx-auto mt-5 font-display text-4xl font-black uppercase tracking-wider sm:text-6xl">
+          <span className="text-white">Buyam-</span>
+          <span className="text-shimmer">Sellam</span>
+        </h1>
+        <p className="mt-2 font-display text-[11px] font-bold uppercase tracking-[0.4em] text-gold/80">
+          Marketplace Trading Game
         </p>
-        <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-dim sm:text-base">
+        <p className="mx-auto mt-6 max-w-xl text-sm leading-relaxed text-dim sm:text-base">
           Buy low, sell high, pay your taxes — and out-trade your rivals for the
           highest balance.
         </p>
-        <div className="mt-6 flex items-center justify-center gap-3">
-          <Dice die1={4} die2={5} total={9} label="" size="lg" rolling />
-        </div>
       </section>
 
       {saved && (
