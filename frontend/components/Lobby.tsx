@@ -293,14 +293,14 @@ export default function Lobby() {
             <input
               type="range"
               min={1}
-              max={10}
+              max={20}
               value={rounds}
               onChange={(e) => setRounds(Number(e.target.value))}
               className="w-full"
             />
             <div className="flex justify-between text-[10px] uppercase tracking-widest text-dim">
               <span>1</span>
-              <span>10</span>
+              <span>20</span>
             </div>
           </div>
 
