@@ -196,7 +196,7 @@ def create_game(req: CreateGameRequest):
         "phase": GamePhase.CREATED.value,
         "round_number": 0,
         "total_rounds": req.total_rounds,
-        "starting_balance": req.starting_balance,
+        "starting_balance": difficulty.starting_balance,
         "difficulty": req.difficulty.value,
         "strategies_submitted": [],
         "player_strategies": {},
@@ -213,7 +213,7 @@ def create_game(req: CreateGameRequest):
         {
             "total_rounds": req.total_rounds,
             "difficulty": req.difficulty.value,
-            "starting_balance": req.starting_balance,
+            "starting_balance": difficulty.starting_balance,
         },
     )
     return _game_state(game_id)

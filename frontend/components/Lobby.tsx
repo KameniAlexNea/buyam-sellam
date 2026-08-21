@@ -155,7 +155,6 @@ export default function Lobby() {
     setCreating(true);
     try {
       const game = await api.createGame({
-        starting_balance: 50_000,
         total_rounds: rounds,
         difficulty,
       });

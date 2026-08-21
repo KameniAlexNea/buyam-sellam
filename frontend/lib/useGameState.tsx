@@ -30,6 +30,7 @@ export interface UseGameState {
   /** true when bots are still submitting strategies this round. */
   botsStrategizing: boolean;
   refresh: () => Promise<void>;
+  refreshHistory: () => Promise<void>;
   submitStrategy: (username: string, choices: StrategyChoice[]) => Promise<void>;
   executeAction: (quantity: number) => Promise<void>;
 }
@@ -60,15 +61,17 @@ export function useGameState(gameId: string): UseGameState {
   const driving = useRef(false);
 
   const refresh = useCallback(async () => {
-    const [next, hist] = await Promise.all([
-      api.getGame(gameId),
-      api.history(gameId).catch(() => null),
-    ]);
+    const next = await api.getGame(gameId);
     gameRef.current = next;
     setGame(next);
-    if (hist) setHistory(hist.history);
     setError(null);
     setLoading(false);
+  }, [gameId]);
+
+  // History is only needed when the player opens the log — never poll it.
+  const refreshHistory = useCallback(async () => {
+    const hist = await api.history(gameId).catch(() => null);
+    if (hist) setHistory(hist.history);
   }, [gameId]);
 
   // Drive bots: submit pending bot strategies, then execute bot actions.
@@ -218,6 +221,7 @@ export function useGameState(gameId: string): UseGameState {
     humanActionPending,
     botsStrategizing,
     refresh,
+    refreshHistory,
     submitStrategy,
     executeAction,
   };

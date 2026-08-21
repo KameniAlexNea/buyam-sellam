@@ -31,6 +31,7 @@ export default function GameBoard({ gameId }: { gameId: string }) {
     canSubmitStrategy,
     botsStrategizing,
     refresh,
+    refreshHistory,
     submitStrategy,
     executeAction,
   } = useGameState(gameId);
@@ -62,6 +63,12 @@ export default function GameBoard({ gameId }: { gameId: string }) {
   useEffect(() => {
     setChoices({});
   }, [game?.round_number, currentPlanner]);
+
+  // Fetch the event log only while it's actually open (and re-fetch when the
+  // round or phase advances so it stays fresh). No background polling.
+  useEffect(() => {
+    if (showLog) refreshHistory();
+  }, [showLog, game?.round_number, game?.phase, refreshHistory]);
 
   if (loading && !game) {
     return (
@@ -140,7 +147,6 @@ export default function GameBoard({ gameId }: { gameId: string }) {
     setNavError(null);
     try {
       const fresh = await api.createGame({
-        starting_balance: 50_000,
         total_rounds: game.total_rounds,
         difficulty: game.difficulty as Difficulty,
       });

@@ -36,7 +36,13 @@ class Action(str, Enum):
 
 
 class CreateGameRequest(BaseModel):
-    starting_balance: float = Field(50000, ge=0)
+    # Kept for backward compatibility, but the starting balance now comes from
+    # the selected difficulty preset (Easy 80k / Medium 50k / Hard 30k).
+    starting_balance: Optional[float] = Field(
+        None,
+        ge=0,
+        description="Deprecated: starting balance is derived from the difficulty preset.",
+    )
     total_rounds: int = Field(5, ge=1, le=100)
     difficulty: Difficulty = Field(
         Difficulty.MEDIUM,
