@@ -134,6 +134,9 @@ export default function HelpContent() {
           Which strategies can sit at the table depends on the <b className="text-gold">difficulty</b>:
           Easy gets a fixed roster of weak bots (you only pick the count),
           Medium the classic heuristics, Hard only the probability-aware traders.
+          The number of opponents is tied to the level too — Easy seats 0–4,
+          Medium 4–8, Hard 6–10 (more traders drain market supply, so bigger
+          tables are harder). With two or more humans the limit is lifted.
         </p>
         <ul className="space-y-1.5">
           <Bullet>

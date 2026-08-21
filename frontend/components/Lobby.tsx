@@ -32,12 +32,16 @@ const DIFFICULTIES: { value: Difficulty; label: string; blurb: string; cash: num
 ];
 
 const BOT_NAMES = [
-  "Bot_Alpha",
-  "Bot_Beta",
-  "Bot_Gamma",
-  "Bot_Delta",
-  "Bot_Epsilon",
-  "Bot_Zeta",
+  "Mama_Tchop",
+  "Mami_Ben",
+  "Papa_Ngassa",
+  "Tata_Ndounou",
+  "Na_Bella",
+  "Uncle_Martin",
+  "Sister_Marie",
+  "Brother_Etienne",
+  "Madam_Flore",
+  "Monsieur_Pierre",
 ];
 
 interface BotRow {
@@ -121,6 +125,56 @@ export default function Lobby() {
     );
   }, [allowedStrategies]);
 
+  // Opponent count is tied to difficulty: Easy seats 0-4, Medium 4-8, Hard
+  // 6-10 (more traders drain market supply = harder). With 2+ humans the limit
+  // is lifted — the humans already raise the complexity, so the table can be
+  // configured freely up to the free cap.
+  const humanCount = humans.length;
+  const botRange = useMemo<[number, number]>(() => {
+    if (!difficulties) return [0, 12];
+    if (humanCount >= 2) return [0, difficulties[difficulty].free_max_bots];
+    return difficulties[difficulty].bot_range;
+  }, [difficulties, difficulty, humanCount]);
+  const minBots = botRange[0];
+  const maxBots = botRange[1];
+
+  const freshName = (used: Set<string>): string => {
+    for (const n of BOT_NAMES) if (!used.has(n)) return n;
+    // Pool exhausted (only possible with 2+ humans and >10 bots): reuse a base
+    // name with a numeral suffix instead of falling back to a generic "Bot_1".
+    const base = BOT_NAMES[used.size % BOT_NAMES.length];
+    let k = 2;
+    while (used.has(`${base}_${k}`)) k += 1;
+    return `${base}_${k}`;
+  };
+
+  // Keep the table size inside the difficulty's range: trim when a level is
+  // too big, top up when it needs more opponents. The roster adapts to the
+  // difficulty, just like the strategy pool does.
+  useEffect(() => {
+    if (!difficulties) return;
+    setBots((prev) => {
+      let list = prev;
+      if (list.length > maxBots) list = list.slice(0, maxBots);
+      if (list.length < minBots) {
+        const next = [...list];
+        const used = new Set([...humans, ...next.map((b) => b.name)]);
+        while (next.length < minBots) {
+          const name = freshName(used);
+          used.add(name);
+          const strat = allowedStrategies.length
+            ? allowedStrategies[
+                Math.floor(Math.random() * allowedStrategies.length)
+              ].name
+            : "";
+          next.push({ name, strategy: strat });
+        }
+        list = next;
+      }
+      return list;
+    });
+  }, [difficulties, difficulty, humanCount, minBots, maxBots, allowedStrategies]);
+
   // Offer to resume the last game saved to localStorage.
   useEffect(() => {
     setSaved(loadGame());
@@ -130,8 +184,7 @@ export default function Lobby() {
     () => new Set([...humans, ...bots.map((b) => b.name)]),
     [humans, bots]
   );
-  const nextBotName =
-    BOT_NAMES.find((n) => !usedNames.has(n)) ?? `Bot_${bots.length + 1}`;
+  const nextBotName = freshName(usedNames);
 
   const addHuman = () => {
     setHumans((prev) => [...prev, `Player ${prev.length + 1}`]);
@@ -147,6 +200,7 @@ export default function Lobby() {
 
   const addBot = () => {
     if (allowedStrategies.length === 0) return; // roster not loaded yet
+    if (bots.length >= maxBots) return; // difficulty seat cap reached
     const pick =
       allowedStrategies[Math.floor(Math.random() * allowedStrategies.length)];
     setBots((prev) => [...prev, { name: nextBotName, strategy: pick.name }]);
@@ -313,6 +367,12 @@ export default function Lobby() {
                   <p className="mt-2 font-mono text-[11px] text-buy">
                     {d.cash.toLocaleString()} FCFA start
                   </p>
+                  {difficulties && (
+                    <p className="mt-1 font-mono text-[11px] text-cyan">
+                      {difficulties[d.value].bot_range[0]}–
+                      {difficulties[d.value].bot_range[1]} opponents
+                    </p>
+                  )}
                 </button>
               ))}
             </div>
@@ -417,12 +477,20 @@ export default function Lobby() {
               <button
                 type="button"
                 onClick={addBot}
-                disabled={allowedStrategies.length === 0}
+                disabled={allowedStrategies.length === 0 || bots.length >= maxBots}
                 className="rounded-lg border border-gold/30 bg-gold/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-gold transition-colors hover:bg-gold/20 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 + Add bot
               </button>
             </div>
+
+            {difficulties && (
+              <p className="mb-2 text-[11px] leading-snug text-dim">
+                {humanCount >= 2
+                  ? `Multiple humans at the table — bot limit lifted (up to ${maxBots}).`
+                  : `This level seats ${minBots}–${maxBots} bots.`}
+              </p>
+            )}
 
             <div className="space-y-2">
               {bots.map((bot, i) => (
@@ -463,7 +531,8 @@ export default function Lobby() {
                   <button
                     type="button"
                     onClick={() => removeBot(i)}
-                    className="h-8 w-8 shrink-0 rounded-lg border border-sell/30 text-sell transition-colors hover:bg-sell/10"
+                    disabled={bots.length <= minBots}
+                    className="h-8 w-8 shrink-0 rounded-lg border border-sell/30 text-sell transition-colors hover:bg-sell/10 disabled:cursor-not-allowed disabled:opacity-30"
                     aria-label={`Remove ${bot.name}`}
                   >
                     ✕

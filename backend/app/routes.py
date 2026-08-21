@@ -17,6 +17,7 @@ from ksell.model.difficulty import (
     Difficulty,
     DifficultyConfig,
     allowed_bot_strategies,
+    bot_count_range,
     pick_bot_strategy,
 )
 from ksell.model.market_board import MarketBoard, DICE_BASE
@@ -479,6 +480,26 @@ def add_player(game_id: str, req: AddPlayerRequest):
     strategy = req.strategy
     if role == "bot":
         diff = Difficulty(_meta[game_id]["difficulty"])
+        # Enforce the difficulty's opponent cap (lifted when 2+ humans sit in).
+        humans = sum(
+            1
+            for r in _meta[game_id]["player_roles"].values()
+            if r.get("role") == "human"
+        )
+        bots_now = sum(
+            1
+            for r in _meta[game_id]["player_roles"].values()
+            if r.get("role") == "bot"
+        )
+        _, max_bots = bot_count_range(diff, humans)
+        if bots_now >= max_bots:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Difficulty '{diff.value}' seats at most {max_bots} bots "
+                    f"({bots_now} already at the table)."
+                ),
+            )
         allowed = set(allowed_bot_strategies(diff))
         if strategy not in allowed:
             strategy = pick_bot_strategy(diff)

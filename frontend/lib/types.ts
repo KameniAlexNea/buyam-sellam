@@ -140,6 +140,10 @@ export interface DifficultyInfo {
   bot_pool: StrategyInfo[];
   /** True when the user cannot change bot strategies (Easy = fixed roster). */
   bot_pool_locked: boolean;
+  /** (min, max) opponent count allowed for this level. */
+  bot_range: [number, number];
+  /** Cap used when the limit is lifted (2+ humans at the table). */
+  free_max_bots: number;
 }
 
 export type Difficulties = Record<Difficulty, DifficultyInfo>;

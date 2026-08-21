@@ -190,3 +190,31 @@ def allowed_bot_strategies(difficulty: Difficulty) -> list[str]:
 def pick_bot_strategy(difficulty: Difficulty) -> str:
     """Pick a random strategy from the level's allowed pool."""
     return random.choice(allowed_bot_strategies(difficulty))
+
+
+# ---------------------------------------------------------------------------
+# Opponent count per difficulty level
+# ---------------------------------------------------------------------------
+# More opponents means more competition for market supply (markets empty out),
+# which is exactly what makes a table harder — so the level also caps the size
+# of the table.
+
+BOT_COUNT_RANGES: dict[Difficulty, Tuple[int, int]] = {
+    Difficulty.EASY: (0, 4),
+    Difficulty.MEDIUM: (4, 8),
+    Difficulty.HARD: (6, 10),
+}
+
+FREE_MAX_BOTS = 12  # generous cap once the difficulty limit is lifted
+
+
+def bot_count_range(difficulty: Difficulty, human_count: int) -> Tuple[int, int]:
+    """Return the (min, max) opponents allowed for a difficulty + human count.
+
+    With two or more humans at the table the limit is lifted — the humans
+    themselves already raise the complexity, so the table may be configured
+    freely (up to ``FREE_MAX_BOTS``).
+    """
+    if human_count >= 2:
+        return (0, FREE_MAX_BOTS)
+    return BOT_COUNT_RANGES.get(difficulty, BOT_COUNT_RANGES[Difficulty.MEDIUM])

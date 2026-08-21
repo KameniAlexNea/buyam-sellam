@@ -6,7 +6,13 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from ksell.model.difficulty import Difficulty, DifficultyConfig, allowed_bot_strategies
+from ksell.model.difficulty import (
+    BOT_COUNT_RANGES,
+    FREE_MAX_BOTS,
+    Difficulty,
+    DifficultyConfig,
+    allowed_bot_strategies,
+)
 from ksell.strategy import ALL_STRATEGIES
 from app.routes import router
 
@@ -60,6 +66,8 @@ def list_difficulties():
                 for name in allowed_bot_strategies(d)
             ],
             "bot_pool_locked": d == Difficulty.EASY,
+            "bot_range": list(BOT_COUNT_RANGES[d]),
+            "free_max_bots": FREE_MAX_BOTS,
         }
     return out
 
