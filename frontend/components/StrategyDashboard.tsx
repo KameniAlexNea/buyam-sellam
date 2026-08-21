@@ -327,6 +327,31 @@ export default function StrategyDashboard({
             ))}
           </div>
         </div>
+
+        {/* Inventory */}
+        <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3">
+          <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">
+            Inventory ({plannerPlayer?.inventory.length ?? 0} items)
+          </p>
+          <div className="mt-2 flex flex-col gap-1">
+            {plannerPlayer?.inventory.map((it) => {
+              const totalVal = it.quantity * it.avg_cost;
+              return (
+                <div key={it.product.name} className="flex items-center justify-between rounded-md bg-board/40 px-2 py-1 text-[11px]">
+                  <span className="truncate text-bright">
+                    {productMeta(it.product.name).icon} {it.product.name}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="font-display font-bold text-cyan">× {it.quantity}</span>
+                    <span className="text-[9px] text-dim" title={`avg cost ${money(it.avg_cost)}/u · value ${money(totalVal)}`}>
+                      @ {moneyShort(it.avg_cost)}
+                    </span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* ---------- CENTER: trades + summary ---------- */}
@@ -512,31 +537,6 @@ export default function StrategyDashboard({
                 </span>
               </div>
             ))}
-          </div>
-        </div>
-
-        {/* Inventory */}
-        <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3">
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">
-            Inventory ({plannerPlayer?.inventory.length ?? 0} items)
-          </p>
-          <div className="mt-2 flex flex-col gap-1">
-            {plannerPlayer?.inventory.map((it) => {
-              const totalVal = it.quantity * it.avg_cost;
-              return (
-                <div key={it.product.name} className="flex items-center justify-between rounded-md bg-board/40 px-2 py-1 text-[11px]">
-                  <span className="truncate text-bright">
-                    {productMeta(it.product.name).icon} {it.product.name}
-                  </span>
-                  <span className="flex shrink-0 items-center gap-2">
-                    <span className="font-display font-bold text-cyan">× {it.quantity}</span>
-                    <span className="text-[9px] text-dim" title={`avg cost ${money(it.avg_cost)}/u · value ${money(totalVal)}`}>
-                      @ {moneyShort(it.avg_cost)}
-                    </span>
-                  </span>
-                </div>
-              );
-            })}
           </div>
         </div>
       </div>

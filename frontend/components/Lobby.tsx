@@ -49,11 +49,12 @@ interface BotRow {
 export default function Lobby() {
   const router = useRouter();
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
-  const [rounds, setRounds] = useState(5);
+  const [rounds, setRounds] = useState(10);
   const [humans, setHumans] = useState<string[]>(["You"]);
-  const [bots, setBots] = useState<BotRow[]>([
-    { name: "Bot_Alpha", strategy: "" },
-  ]);
+  // Default: 1 human vs 5 bots — you play only against the (weaker) AI.
+  const [bots, setBots] = useState<BotRow[]>(
+    BOT_NAMES.slice(0, 5).map((name) => ({ name, strategy: "" }))
+  );
   const [strategies, setStrategies] = useState<StrategyInfo[]>([]);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
