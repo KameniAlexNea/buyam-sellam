@@ -1,14 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { GameState } from "@/lib/types";
 import { money, moneyShort, playerColor, productMeta, TONE_CLASSES } from "@/lib/format";
-import {
-  probAtLeast,
-  probLabel,
-  rollForBuy,
-  rollForSell,
-} from "@/lib/dice";
 import Dice from "./Dice";
 
 interface ActionDashboardProps {
@@ -16,21 +10,6 @@ interface ActionDashboardProps {
   busy?: boolean;
   onExecute: (quantity: number) => void;
 }
-
-/** 2d6 distribution: roll → count out of 36. */
-const DIST: { roll: number; prob: number }[] = [
-  { roll: 2, prob: 1 },
-  { roll: 3, prob: 2 },
-  { roll: 4, prob: 3 },
-  { roll: 5, prob: 4 },
-  { roll: 6, prob: 5 },
-  { roll: 7, prob: 6 },
-  { roll: 8, prob: 5 },
-  { roll: 9, prob: 4 },
-  { roll: 10, prob: 3 },
-  { roll: 11, prob: 2 },
-  { roll: 12, prob: 1 },
-].map((d) => ({ roll: d.roll, prob: d.prob / 36 }));
 
 export default function ActionDashboard({ game, busy, onExecute }: ActionDashboardProps) {
   const isBuy = !!game.can_buy;
@@ -70,10 +49,6 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
   const total = isBuy ? gross + tax : gross - tax;
   const balance = player?.balance ?? 0;
   const newBalance = isBuy ? balance - total : balance + total;
-
-  const buyRoll = rollForBuy(marketPrice);
-  const sellRoll = rollForSell(marketPrice);
-  const buyProb = probAtLeast(buyRoll);
 
   const hist = market?.price_history ?? [];
   const last = hist.length > 0 ? hist[hist.length - 1] : marketPrice;
@@ -161,7 +136,7 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
       <div className="flex flex-col gap-4">
         <MarketCard market={market} meta={meta} trendLabel={trendLabel} trendUp={trendUp} trendDown={trendDown} />
 
-        {/* Dice + probability */}
+        {/* Dice */}
         <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3">
           <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">
             Your dice (2d6)
@@ -175,26 +150,6 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
               <p className="text-[10px] text-dim">→ dice price</p>
               <p className="font-display text-base font-bold text-cyan">{money(dicePrice)}</p>
             </div>
-          </div>
-
-          <p className="mt-3 font-display text-[9px] font-bold uppercase tracking-[0.3em] text-dim">
-            2d6 probability guide
-          </p>
-          <div className="mt-1.5 flex items-end justify-center gap-0.5">
-            {DIST.map((d) => (
-              <div key={d.roll} className="flex flex-col items-center gap-0.5">
-                <span className="text-[8px] font-bold text-dim">
-                  {Math.round(d.prob * 100).toFixed(1).replace(".0", "")}%
-                </span>
-                <div
-                  className={`w-4 rounded-sm ${d.roll === 7 ? "bg-gold" : "bg-cyan/50"}`}
-                  style={{ height: `${Math.max(4, d.prob * 110)}px` }}
-                />
-                <span className={`text-[8px] font-bold ${d.roll === 7 ? "text-gold" : "text-dim"}`}>
-                  {d.roll}
-                </span>
-              </div>
-            ))}
           </div>
         </div>
 
@@ -213,8 +168,8 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
 
           <div className="mt-2 rounded-lg border border-[rgba(100,180,255,0.08)] bg-board/40 p-2 text-[11px]">
             {isBuy ? (
-              <p>
-                Can buy · <span className="text-buy">Success chance {probLabel(buyProb)}</span> (roll {buyRoll}+)
+              <p className="text-buy">
+                ✅ Success — dice price {money(dicePrice)} ≥ market {money(marketPrice)}
               </p>
             ) : (
               <p className="text-sell">

@@ -265,8 +265,10 @@ export default function GameBoard({ gameId }: { gameId: string }) {
 
       {/* Whose turn is it — the action phase shows dice turn order; the
           strategy phase already shows player/planning status in the dashboard's
-          right "Players" panel, so the ribbon would only duplicate it. */}
-      {game.phase === "action" && (
+          right "Players" panel, so the ribbon would only duplicate it. During
+          a bot's action turn the board is shown instead (no Players panel), so
+          the turn-order ribbon stays there. */}
+      {game.phase === "action" && !isHumanTurn && (
         <TurnTracker
           game={game}
           currentPlanner={currentPlanner}
