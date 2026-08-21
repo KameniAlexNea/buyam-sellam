@@ -1,5 +1,6 @@
 import type {
   ActionResult,
+  Difficulties,
   Difficulty,
   GameState,
   History,
@@ -54,6 +55,8 @@ export const api = {
   health: () => request<{ status: string }>("/health"),
 
   strategies: () => request<StrategyInfo[]>("/strategies"),
+
+  difficulties: () => request<Difficulties>("/difficulties"),
 
   createGame: (body: {
     total_rounds: number;

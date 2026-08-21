@@ -5,7 +5,8 @@ import { api, ApiError } from "./api";
 import type { GameState, HistoryEntry, MarketAction } from "./types";
 
 const POLL_MS = 900; // poll while a bot needs driving
-const BOT_STEP_MS = 1500; // visible pause between consecutive bot moves
+const BOT_PLAN_MS = 350; // brief beat after a bot submits its strategy (fast resolution)
+const BOT_ACTION_MS = 1500; // visible pause while a bot actually trades (the "playing" moment)
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -136,7 +137,9 @@ export function useGameState(gameId: string): UseGameState {
             strategy_name: strat,
           });
           await refresh();
-          await sleep(BOT_STEP_MS); // let the human see the plan land
+          // Planning is background admin — keep it snappy so the round
+          // resolves into the action phase quickly.
+          await sleep(BOT_PLAN_MS);
           continue;
         }
 
@@ -151,7 +154,8 @@ export function useGameState(gameId: string): UseGameState {
             strategy_name: strat,
           });
           await refresh();
-          await sleep(BOT_STEP_MS); // let the human see the move land
+          // This is the "watch the bot play" beat — keep it long enough to read.
+          await sleep(BOT_ACTION_MS);
           continue;
         }
 

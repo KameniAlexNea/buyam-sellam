@@ -38,7 +38,7 @@ class Action(str, Enum):
 class CreateGameRequest(BaseModel):
     # The starting balance comes from the selected difficulty preset
     # (Easy 80k / Medium 50k / Hard 30k) — see ksell/model/difficulty.py.
-    total_rounds: int = Field(5, ge=1, le=20)
+    total_rounds: int = Field(10, ge=1, le=20)
     difficulty: Difficulty = Field(
         Difficulty.MEDIUM,
         description="Game difficulty level (affects markets, taxes, player resources)",
@@ -118,6 +118,10 @@ class MarketInfoResponse(BaseModel):
     market_supply: int
     tax_rate: float = 0.0
     sell_entry_fee: int = 0
+    capacity: int = Field(
+        0,
+        description="Base size of the market (max supply it starts each round with)",
+    )
     price_history: list[int] = Field(
         default_factory=list,
         description="Price per active round (drives the sparkline charts)",

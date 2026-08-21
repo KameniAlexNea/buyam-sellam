@@ -6,6 +6,13 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from ksell.model.difficulty import (
+    BOT_COUNT_RANGES,
+    FREE_MAX_BOTS,
+    Difficulty,
+    DifficultyConfig,
+    allowed_bot_strategies,
+)
 from ksell.strategy import ALL_STRATEGIES
 from app.routes import router
 
@@ -33,6 +40,36 @@ def list_strategies():
         {"name": name, "label": cls.label, "description": cls.description}
         for name, cls in sorted(ALL_STRATEGIES.items())
     ]
+
+
+@app.get("/difficulties", tags=["strategies"])
+def list_difficulties():
+    """Per-difficulty bot roster rules for the lobby.
+
+    ``bot_pool`` is the set of strategies allowed at that level and
+    ``bot_pool_locked`` tells the UI whether the user may change them (Easy
+    bots are a fixed weak roster — the user only controls the count).
+    """
+    out = {}
+    for d in Difficulty:
+        cfg = DifficultyConfig.from_difficulty(d)
+        out[d.value] = {
+            "label": cfg.name,
+            "description": cfg.description,
+            "starting_balance": cfg.starting_balance,
+            "bot_pool": [
+                {
+                    "name": name,
+                    "label": ALL_STRATEGIES[name].label,
+                    "description": ALL_STRATEGIES[name].description,
+                }
+                for name in allowed_bot_strategies(d)
+            ],
+            "bot_pool_locked": d == Difficulty.EASY,
+            "bot_range": list(BOT_COUNT_RANGES[d]),
+            "free_max_bots": FREE_MAX_BOTS,
+        }
+    return out
 
 
 @app.exception_handler(Exception)

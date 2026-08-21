@@ -8,10 +8,8 @@ import { useGameState } from "@/lib/useGameState";
 import { DIFFICULTY_META, phaseLabel } from "@/lib/format";
 import { buildSavedGame, clearGame, saveGame } from "@/lib/storage";
 import Board from "./Board";
-import TurnTracker from "./TurnTracker";
 import GameHeader from "./GameHeader";
-import ActionPanel from "./ActionPanel";
-import BotTurnPanel from "./BotTurnPanel";
+import BotTurnDashboard from "./BotTurnDashboard";
 import StrategyDashboard from "./StrategyDashboard";
 import ActionDashboard from "./ActionDashboard";
 import ResultsPanel from "./ResultsPanel";
@@ -219,18 +217,7 @@ export default function GameBoard({ gameId }: { gameId: string }) {
   };
 
   let center: React.ReactNode;
-  if (game.phase === "action") {
-    center = isHumanTurn ? (
-      <ActionPanel
-        game={game}
-        isHumanTurn={isHumanTurn}
-        busy={busy}
-        onExecute={executeAction}
-      />
-    ) : (
-      <BotTurnPanel game={game} />
-    );
-  } else if (game.phase === "game_over") {
+  if (game.phase === "game_over") {
     center = (
       <div className="flex w-full flex-col items-center gap-3">
         <ResultsPanel
@@ -272,19 +259,6 @@ export default function GameBoard({ gameId }: { gameId: string }) {
         }
       />
 
-      {/* Whose turn is it — the action phase shows dice turn order; the
-          strategy phase already shows player/planning status in the dashboard's
-          right "Players" panel, so the ribbon would only duplicate it. During
-          a bot's action turn the board is shown instead (no Players panel), so
-          the turn-order ribbon stays there. */}
-      {game.phase === "action" && !isHumanTurn && (
-        <TurnTracker
-          game={game}
-          currentPlanner={currentPlanner}
-          humanPlayers={humanPlayers}
-        />
-      )}
-
       {/* Market news ticker (strategy & action phases) */}
       {["strategy", "action"].includes(game.phase) && game.news.length > 0 && (
         <NewsTicker items={game.news} />
@@ -312,6 +286,9 @@ export default function GameBoard({ gameId }: { gameId: string }) {
         />
       ) : game.phase === "action" && isHumanTurn ? (
         <ActionDashboard game={game} busy={busy} onExecute={executeAction} />
+      ) : game.phase === "action" ? (
+        // Bot's action turn — same dashboard look, but auto-driven replay.
+        <BotTurnDashboard game={game} />
       ) : game.phase === "end_round" && game.round_recap ? (
         // Round-end recap gets the full width — the "what happened" moment.
         <div className="mx-auto w-full max-w-2xl">

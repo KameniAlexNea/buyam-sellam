@@ -9,18 +9,23 @@ The Table object is kept in-memory per game.  After every state transition
 the full state is flushed to out/{game_id}/state.json.
 """
 
-import random
 from typing import Any, Dict, List, Tuple
 
 from fastapi import APIRouter, HTTPException
 
-from ksell.model.difficulty import Difficulty, DifficultyConfig
+from ksell.model.difficulty import (
+    Difficulty,
+    DifficultyConfig,
+    allowed_bot_strategies,
+    bot_count_range,
+    pick_bot_strategy,
+)
 from ksell.model.market_board import MarketBoard, DICE_BASE
 from ksell.model.player import Player
 from ksell.model.product import ProductModel
 from ksell.model.table import Table
 from ksell.pojo.user import User
-from ksell.strategy import ALL_STRATEGIES, get_strategy
+from ksell.strategy import get_strategy
 from ksell.utils.random_utils import uniform_int_range
 
 from app.schemas import (
@@ -97,6 +102,7 @@ def _market_info(idx: int, m: MarketBoard) -> MarketInfoResponse:
         market_supply=m.market_supply,
         tax_rate=m.location.tax_rate,
         sell_entry_fee=m.sell_entry_fee,
+        capacity=m.total_qty,
         price_history=m.price_history,
     )
 
@@ -466,12 +472,37 @@ def add_player(game_id: str, req: AddPlayerRequest):
     table.add_player(player)
 
     # Record whether this player is a human or an AI bot (and its strategy).
-    # Bots without a strategy get a random one from the backend registry, so
-    # the strategy list is always the single source of truth (no hardcoding).
+    # Bots are assigned a strategy from the DIFFICULTY's allowed pool, so the
+    # level decides which brains can sit at the table (Easy only gets weak
+    # bots; Hard only the probability-aware ones). A strategy outside the
+    # level's pool is silently replaced — the roster is the source of truth.
     role = req.role if req.role in {"human", "bot"} else "human"
     strategy = req.strategy
-    if role == "bot" and not strategy:
-        strategy = random.choice(list(ALL_STRATEGIES.keys()))
+    if role == "bot":
+        diff = Difficulty(_meta[game_id]["difficulty"])
+        # Enforce the difficulty's opponent cap (lifted when 2+ humans sit in).
+        humans = sum(
+            1
+            for r in _meta[game_id]["player_roles"].values()
+            if r.get("role") == "human"
+        )
+        bots_now = sum(
+            1
+            for r in _meta[game_id]["player_roles"].values()
+            if r.get("role") == "bot"
+        )
+        _, max_bots = bot_count_range(diff, humans)
+        if bots_now >= max_bots:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Difficulty '{diff.value}' seats at most {max_bots} bots "
+                    f"({bots_now} already at the table)."
+                ),
+            )
+        allowed = set(allowed_bot_strategies(diff))
+        if strategy not in allowed:
+            strategy = pick_bot_strategy(diff)
     _meta[game_id]["player_roles"][req.username] = {
         "role": role,
         "strategy": strategy,
@@ -706,7 +737,13 @@ def submit_bot_strategy(game_id: str, req: BotStrategyRequest):
     player_dicts = [_player_info(p).model_dump() for p in table.players]
 
     strategy = get_strategy(req.strategy_name)
-    choices = strategy.choose_strategy(market_dicts, player_dicts, req.username)
+    choices = strategy.choose_strategy(
+        market_dicts,
+        player_dicts,
+        req.username,
+        round_number=meta.get("round_number", table.current_round),
+        total_rounds=table.total_rounds,
+    )
     entries = [{"market_index": mi, "action": act} for mi, act in choices]
 
     parsed = _validate_strategy(game_id, req.username, entries)

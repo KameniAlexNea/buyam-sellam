@@ -3,9 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
-import type { Difficulty, StrategyInfo } from "@/lib/types";
+import type { Difficulties, Difficulty, StrategyInfo } from "@/lib/types";
 import { buildSavedGame, clearGame, loadGame, saveGame, type SavedGame } from "@/lib/storage";
-import Dice from "./Dice";
 import GameHeader from "./GameHeader";
 
 const DIFFICULTIES: { value: Difficulty; label: string; blurb: string; cash: number; active: string }[] = [
@@ -33,12 +32,16 @@ const DIFFICULTIES: { value: Difficulty; label: string; blurb: string; cash: num
 ];
 
 const BOT_NAMES = [
-  "Bot_Alpha",
-  "Bot_Beta",
-  "Bot_Gamma",
-  "Bot_Delta",
-  "Bot_Epsilon",
-  "Bot_Zeta",
+  "Mama_Tchop",
+  "Mami_Ben",
+  "Papa_Ngassa",
+  "Tata_Ndounou",
+  "Na_Bella",
+  "Uncle_Martin",
+  "Sister_Marie",
+  "Brother_Etienne",
+  "Madam_Flore",
+  "Monsieur_Pierre",
 ];
 
 interface BotRow {
@@ -49,39 +52,33 @@ interface BotRow {
 export default function Lobby() {
   const router = useRouter();
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
-  const [rounds, setRounds] = useState(5);
+  const [rounds, setRounds] = useState(10);
   const [humans, setHumans] = useState<string[]>(["You"]);
-  const [bots, setBots] = useState<BotRow[]>([
-    { name: "Bot_Alpha", strategy: "" },
-  ]);
+  // Default: 1 human vs 5 bots — you play only against the (weaker) AI.
+  const [bots, setBots] = useState<BotRow[]>(
+    BOT_NAMES.slice(0, 5).map((name) => ({ name, strategy: "" }))
+  );
   const [strategies, setStrategies] = useState<StrategyInfo[]>([]);
+  const [difficulties, setDifficulties] = useState<Difficulties | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SavedGame | null>(null);
 
-  // Load the strategy list, retrying until the backend answers so the
-  // dropdown never gets stuck showing only one option.
+  // Load the strategy list and the per-difficulty bot rosters, retrying until
+  // the backend answers so the dropdown never gets stuck showing one option.
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const load = async () => {
       try {
-        const list = await api.strategies();
+        const [list, diffs] = await Promise.all([
+          api.strategies(),
+          api.difficulties(),
+        ]);
         if (cancelled) return;
-        if (list.length > 0) {
+        if (list.length > 0 && diffs) {
           setStrategies(list);
-          // Assign a strategy straight from the API to any bot that doesn't
-          // have one yet (the list is the single source of truth).
-          setBots((prev) =>
-            prev.map((b) =>
-              b.strategy
-                ? b
-                : {
-                    ...b,
-                    strategy: list[Math.floor(Math.random() * list.length)].name,
-                  }
-            )
-          );
+          setDifficulties(diffs);
         } else {
           timer = setTimeout(load, 2500);
         }
@@ -96,6 +93,88 @@ export default function Lobby() {
     };
   }, []);
 
+  // The strategies a bot may use come from the SELECTED difficulty's pool.
+  // Until the difficulty metadata loads, fall back to the full strategy list.
+  const allowedStrategies = useMemo<StrategyInfo[]>(() => {
+    if (difficulties) return difficulties[difficulty].bot_pool;
+    return strategies;
+  }, [difficulties, difficulty, strategies]);
+
+  // Easy fixes the bot roster (weak AI) — the user can only change the count.
+  const rosterLocked = difficulties?.[difficulty].bot_pool_locked ?? false;
+
+  const labelOf = (name: string) =>
+    allowedStrategies.find((s) => s.name === name)?.label ?? name;
+
+  // Keep every bot on a strategy from the current difficulty's pool: when the
+  // level loads or changes, bots migrate to that pool automatically.
+  useEffect(() => {
+    if (allowedStrategies.length === 0) return;
+    setBots((prev) =>
+      prev.map((b) =>
+        allowedStrategies.some((s) => s.name === b.strategy)
+          ? b
+          : {
+              ...b,
+              strategy:
+                allowedStrategies[
+                  Math.floor(Math.random() * allowedStrategies.length)
+                ].name,
+            }
+      )
+    );
+  }, [allowedStrategies]);
+
+  // Opponent count is tied to difficulty: Easy seats 0-4, Medium 4-8, Hard
+  // 6-10 (more traders drain market supply = harder). With 2+ humans the limit
+  // is lifted — the humans already raise the complexity, so the table can be
+  // configured freely up to the free cap.
+  const humanCount = humans.length;
+  const botRange = useMemo<[number, number]>(() => {
+    if (!difficulties) return [0, 12];
+    if (humanCount >= 2) return [0, difficulties[difficulty].free_max_bots];
+    return difficulties[difficulty].bot_range;
+  }, [difficulties, difficulty, humanCount]);
+  const minBots = botRange[0];
+  const maxBots = botRange[1];
+
+  const freshName = (used: Set<string>): string => {
+    for (const n of BOT_NAMES) if (!used.has(n)) return n;
+    // Pool exhausted (only possible with 2+ humans and >10 bots): reuse a base
+    // name with a numeral suffix instead of falling back to a generic "Bot_1".
+    const base = BOT_NAMES[used.size % BOT_NAMES.length];
+    let k = 2;
+    while (used.has(`${base}_${k}`)) k += 1;
+    return `${base}_${k}`;
+  };
+
+  // Keep the table size inside the difficulty's range: trim when a level is
+  // too big, top up when it needs more opponents. The roster adapts to the
+  // difficulty, just like the strategy pool does.
+  useEffect(() => {
+    if (!difficulties) return;
+    setBots((prev) => {
+      let list = prev;
+      if (list.length > maxBots) list = list.slice(0, maxBots);
+      if (list.length < minBots) {
+        const next = [...list];
+        const used = new Set([...humans, ...next.map((b) => b.name)]);
+        while (next.length < minBots) {
+          const name = freshName(used);
+          used.add(name);
+          const strat = allowedStrategies.length
+            ? allowedStrategies[
+                Math.floor(Math.random() * allowedStrategies.length)
+              ].name
+            : "";
+          next.push({ name, strategy: strat });
+        }
+        list = next;
+      }
+      return list;
+    });
+  }, [difficulties, difficulty, humanCount, minBots, maxBots, allowedStrategies]);
+
   // Offer to resume the last game saved to localStorage.
   useEffect(() => {
     setSaved(loadGame());
@@ -105,8 +184,7 @@ export default function Lobby() {
     () => new Set([...humans, ...bots.map((b) => b.name)]),
     [humans, bots]
   );
-  const nextBotName =
-    BOT_NAMES.find((n) => !usedNames.has(n)) ?? `Bot_${bots.length + 1}`;
+  const nextBotName = freshName(usedNames);
 
   const addHuman = () => {
     setHumans((prev) => [...prev, `Player ${prev.length + 1}`]);
@@ -121,8 +199,10 @@ export default function Lobby() {
   };
 
   const addBot = () => {
-    if (strategies.length === 0) return; // strategies not loaded yet
-    const pick = strategies[Math.floor(Math.random() * strategies.length)];
+    if (allowedStrategies.length === 0) return; // roster not loaded yet
+    if (bots.length >= maxBots) return; // difficulty seat cap reached
+    const pick =
+      allowedStrategies[Math.floor(Math.random() * allowedStrategies.length)];
     setBots((prev) => [...prev, { name: nextBotName, strategy: pick.name }]);
   };
 
@@ -147,7 +227,7 @@ export default function Lobby() {
       setError("Player names must be unique.");
       return;
     }
-    if (strategies.length === 0) {
+    if (allowedStrategies.length === 0) {
       setError("Bot strategies are still loading — wait a moment and try again.");
       return;
     }
@@ -186,20 +266,30 @@ export default function Lobby() {
       <GameHeader back={false} subtitle="New Game" />
 
       {/* Hero */}
-      <section className="relative overflow-hidden rounded-3xl border-2 border-gold/20 bg-gradient-to-br from-card via-board to-deep px-6 py-12 text-center shadow-card">
-        <span className="font-display text-[11px] font-bold uppercase tracking-[0.4em] text-gold">
-          🎲 Marketplace Trading Game
-        </span>
-        <p className="text-shimmer mx-auto mt-4 max-w-2xl font-display text-2xl font-black uppercase tracking-wider sm:text-3xl">
-          Roll the dice, read the markets, trade your way to riches.
+      <section
+        className="relative overflow-hidden rounded-3xl border-2 border-gold/20 bg-gradient-to-br from-card via-board to-deep px-6 py-12 text-center shadow-card"
+        style={{
+          backgroundImage:
+            "url(/bg-pattern.svg), radial-gradient(ellipse at 50% 0%, rgba(255,204,0,0.08), transparent 60%)",
+        }}
+      >
+        <img
+          src="/logo-mark.svg"
+          alt=""
+          className="mx-auto h-28 w-28 sm:h-32 sm:w-32"
+          style={{ filter: "drop-shadow(0 0 20px rgba(255,204,0,0.35))" }}
+        />
+        <h1 className="mx-auto mt-5 font-display text-4xl font-black uppercase tracking-wider sm:text-6xl">
+          <span className="text-white">Buyam-</span>
+          <span className="text-shimmer">Sellam</span>
+        </h1>
+        <p className="mt-2 font-display text-[11px] font-bold uppercase tracking-[0.4em] text-gold/80">
+          Marketplace Trading Game
         </p>
-        <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-dim sm:text-base">
+        <p className="mx-auto mt-6 max-w-xl text-sm leading-relaxed text-dim sm:text-base">
           Buy low, sell high, pay your taxes — and out-trade your rivals for the
           highest balance.
         </p>
-        <div className="mt-6 flex items-center justify-center gap-3">
-          <Dice die1={4} die2={5} total={9} label="" size="lg" rolling />
-        </div>
       </section>
 
       {saved && (
@@ -277,9 +367,21 @@ export default function Lobby() {
                   <p className="mt-2 font-mono text-[11px] text-buy">
                     {d.cash.toLocaleString()} FCFA start
                   </p>
+                  {difficulties && (
+                    <p className="mt-1 font-mono text-[11px] text-cyan">
+                      {difficulties[d.value].bot_range[0]}–
+                      {difficulties[d.value].bot_range[1]} opponents
+                    </p>
+                  )}
                 </button>
               ))}
             </div>
+            {rosterLocked && (
+              <p className="mt-2 text-[11px] leading-snug text-dim">
+                🔒 This level fixes the bot roster — you can only change the
+                number of opponents.
+              </p>
+            )}
           </div>
 
           {/* Rounds */}
@@ -375,12 +477,20 @@ export default function Lobby() {
               <button
                 type="button"
                 onClick={addBot}
-                disabled={strategies.length === 0}
+                disabled={allowedStrategies.length === 0 || bots.length >= maxBots}
                 className="rounded-lg border border-gold/30 bg-gold/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-gold transition-colors hover:bg-gold/20 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 + Add bot
               </button>
             </div>
+
+            {difficulties && (
+              <p className="mb-2 text-[11px] leading-snug text-dim">
+                {humanCount >= 2
+                  ? `Multiple humans at the table — bot limit lifted (up to ${maxBots}).`
+                  : `This level seats ${minBots}–${maxBots} bots.`}
+              </p>
+            )}
 
             <div className="space-y-2">
               {bots.map((bot, i) => (
@@ -394,25 +504,35 @@ export default function Lobby() {
                   <span className="flex-1 truncate text-sm font-semibold">
                     {bot.name}
                   </span>
-                  <select
-                    value={bot.strategy}
-                    onChange={(e) => updateBot(i, { strategy: e.target.value })}
-                    className="rounded-lg border border-[rgba(100,180,255,0.2)] bg-card px-2 py-1.5 text-xs text-bright outline-none focus:border-gold/50"
-                  >
-                    {strategies.length === 0 ? (
-                      <option value="">Loading strategies…</option>
-                    ) : (
-                      strategies.map((s) => (
-                        <option key={s.name} value={s.name}>
-                          {s.label}
-                        </option>
-                      ))
-                    )}
-                  </select>
+                  {rosterLocked ? (
+                    <span
+                      title="Fixed by difficulty — you can only change the number of opponents"
+                      className="shrink-0 rounded-lg border border-[rgba(100,180,255,0.15)] bg-card/60 px-2 py-1.5 text-[11px] text-dim"
+                    >
+                      🔒 {labelOf(bot.strategy)}
+                    </span>
+                  ) : (
+                    <select
+                      value={bot.strategy}
+                      onChange={(e) => updateBot(i, { strategy: e.target.value })}
+                      className="rounded-lg border border-[rgba(100,180,255,0.2)] bg-card px-2 py-1.5 text-xs text-bright outline-none focus:border-gold/50"
+                    >
+                      {allowedStrategies.length === 0 ? (
+                        <option value="">Loading strategies…</option>
+                      ) : (
+                        allowedStrategies.map((s) => (
+                          <option key={s.name} value={s.name}>
+                            {s.label}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  )}
                   <button
                     type="button"
                     onClick={() => removeBot(i)}
-                    className="h-8 w-8 shrink-0 rounded-lg border border-sell/30 text-sell transition-colors hover:bg-sell/10"
+                    disabled={bots.length <= minBots}
+                    className="h-8 w-8 shrink-0 rounded-lg border border-sell/30 text-sell transition-colors hover:bg-sell/10 disabled:cursor-not-allowed disabled:opacity-30"
                     aria-label={`Remove ${bot.name}`}
                   >
                     ✕
@@ -428,10 +548,16 @@ export default function Lobby() {
             </div>
           </div>
 
-          <p className="mt-4 text-xs text-dim">
-            Bot strategies: BuyLowSellHigh hunts margins, AggressiveBuyer hoards
-            stock, ConservativeTrader plays it safe, MarketSniper targets value
-            markets.
+          <p className="mt-4 text-xs leading-relaxed text-dim">
+            {difficulties
+              ? `${difficulties[difficulty].label} bots: ${difficulties[
+                  difficulty
+                ].bot_pool
+                  .map((s) => s.label)
+                  .join(" · ")}.`
+              : "Loading bot roster…"}
+            {rosterLocked &&
+              " You can only change the number of opponents — the roster is fixed."}
           </p>
         </section>
       </div>
