@@ -904,6 +904,15 @@ def _end_current_round(game_id: str):
     meta["max_affordable"] = None
     meta["seller_qty"] = None
 
+    # Snapshot each player's balance at the end of this round, so results can
+    # show per-round performance (best/worst round, win rate, biggest moves).
+    meta.setdefault("round_history", []).append(
+        {
+            "round": table.current_round,
+            "balances": {p.username: round(p.balance, 2) for p in table.players},
+        }
+    )
+
     _flush(game_id)
     append_history(
         game_id, "round_ended", {"round": table.current_round, "purchases": purchases}
@@ -921,6 +930,7 @@ def get_results(game_id: str):
     table = _tables[game_id]
     meta = _meta[game_id]
     starting_balance = meta.get("starting_balance", 0)
+    round_history = meta.get("round_history", [])
 
     final_standings = sorted(table.players, key=lambda p: p.balance, reverse=True)
     standings = []
@@ -936,11 +946,49 @@ def get_results(game_id: str):
             }
         )
 
+    # Per-player round stats: wins (led a round), best/worst round, biggest
+    # single-round gain/loss, computed from the balance snapshots.
+    rounds_stats: Dict[str, Dict[str, Any]] = {}
+    for username in [p.username for p in table.players]:
+        wins = 0
+        best_gain = 0.0
+        worst_loss = 0.0
+        best_round = None
+        worst_round = None
+        prev = starting_balance
+        for rh in round_history:
+            bal = rh["balances"].get(username)
+            if bal is None:
+                continue
+            # Leader this round = highest balance at round end.
+            if rh["balances"] and max(rh["balances"].values()) == bal:
+                wins += 1
+            delta = bal - prev
+            if delta > best_gain:
+                best_gain = delta
+                best_round = rh["round"]
+            if delta < worst_loss:
+                worst_loss = delta
+                worst_round = rh["round"]
+            prev = bal
+        rounds_stats[username] = {
+            "rounds_played": len(round_history),
+            "wins": wins,
+            "win_rate": round(wins / len(round_history), 4) if round_history else 0.0,
+            "best_round": best_round,
+            "best_gain": round(best_gain, 2),
+            "worst_round": worst_round,
+            "worst_loss": round(worst_loss, 2),
+        }
+
     return {
         "game_id": game_id,
         "winner": final_standings[0].username if final_standings else None,
         "standings": standings,
         "starting_balance": starting_balance,
+        "total_rounds": table.total_rounds,
+        "rounds_played": len(round_history),
+        "stats": rounds_stats,
     }
 
 

@@ -298,6 +298,9 @@ export default function GameBoard({ gameId }: { gameId: string }) {
         />
       ) : game.phase === "action" && isHumanTurn ? (
         <ActionDashboard game={game} busy={busy} onExecute={executeAction} />
+      ) : game.phase === "game_over" ? (
+        // Final results get the full width — no board decorations around them.
+        <div className="mx-auto w-full max-w-2xl">{center}</div>
       ) : (
         <Board
           players={game.players}

@@ -116,11 +116,24 @@ export interface Standing {
   inventory: InventoryItem[];
 }
 
+export interface PlayerRoundStats {
+  rounds_played: number;
+  wins: number;
+  win_rate: number;
+  best_round: number | null;
+  best_gain: number;
+  worst_round: number | null;
+  worst_loss: number;
+}
+
 export interface Results {
   game_id: string;
   winner: string;
   standings: Standing[];
   starting_balance: number;
+  total_rounds?: number;
+  rounds_played?: number;
+  stats?: Record<string, PlayerRoundStats>;
 }
 
 export interface HistoryEntry {
