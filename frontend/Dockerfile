@@ -29,6 +29,8 @@ COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/next.config.mjs ./next.config.mjs
+# Static assets (logo, backgrounds, etc.) — served from public/ at runtime.
+COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 CMD ["npm", "run", "start"]
