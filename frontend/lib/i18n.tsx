@@ -150,6 +150,7 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     "recap.seeResults": "🏆 See Final Results",
     "recap.startNext": "▶ Start Round {round}",
     "recap.highlights": "🔥 Round highlights",
+    "recap.bestWorst": "🏆 Best & worst of the round",
     "recap.noHighlights": "No notable trades — a quiet round.",
     "recap.positions": "Standings",
 
@@ -415,6 +416,7 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     "recap.seeResults": "🏆 Voir les résultats finaux",
     "recap.startNext": "▶ Lancer le tour {round}",
     "recap.highlights": "🔥 Temps forts du tour",
+    "recap.bestWorst": "🏆 Meilleur et pire du tour",
     "recap.noHighlights": "Aucun échange notable — un tour calme.",
     "recap.positions": "Classement",
 
