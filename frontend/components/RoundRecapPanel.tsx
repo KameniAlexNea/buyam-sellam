@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { MoveFeedEntry, RoundRecap } from "@/lib/types";
 import { money, playerColor, productMeta, TONE_CLASSES } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
@@ -25,6 +25,8 @@ export default function RoundRecapPanel({
   onNext,
 }: RoundRecapPanelProps) {
   const { t } = useI18n();
+  // Carousel between "round highlights" (slide 0) and "standings" (slide 1).
+  const [slide, setSlide] = useState(0);
   const MEDALS = ["🥇", "🥈", "🥉"];
   // Biggest gainer/loser of the round (by FCFA change).
   const byChange = useMemo(
@@ -117,99 +119,136 @@ export default function RoundRecapPanel({
         </div>
       </div>
 
-      {/* Highlights + standings side by side on wide screens */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Round highlights — the actual trades that made the news */}
-        <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-4">
-        <h3 className="mb-2 font-display text-sm font-bold uppercase tracking-wide">
-          {t("recap.highlights")}
-        </h3>
-        {highlights.length === 0 ? (
-          <p className="text-xs italic text-dim">{t("recap.noHighlights")}</p>
+      {/* Carousel: round highlights ↔ standings */}
+      <div className="mb-4 rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h3 className="font-display text-sm font-bold uppercase tracking-wide">
+            {slide === 0 ? t("recap.highlights") : t("recap.positions")}
+          </h3>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSlide(0)}
+              disabled={slide === 0}
+              aria-label={t("recap.highlights")}
+              className={`flex h-8 w-8 items-center justify-center rounded-lg border text-sm transition-all ${
+                slide === 0
+                  ? "cursor-default border-gold/30 bg-gold/15 text-gold"
+                  : "border-[rgba(100,180,255,0.2)] bg-board/50 text-dim hover:text-gold"
+              }`}
+            >
+              ◀
+            </button>
+            <div className="flex items-center gap-1.5">
+              {[0, 1].map((i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setSlide(i)}
+                  aria-label={i === 0 ? t("recap.highlights") : t("recap.positions")}
+                  className={`h-2 w-2 rounded-full transition-all ${
+                    slide === i ? "bg-gold" : "bg-dim/40 hover:bg-dim/70"
+                  }`}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setSlide(1)}
+              disabled={slide === 1}
+              aria-label={t("recap.positions")}
+              className={`flex h-8 w-8 items-center justify-center rounded-lg border text-sm transition-all ${
+                slide === 1
+                  ? "cursor-default border-gold/30 bg-gold/15 text-gold"
+                  : "border-[rgba(100,180,255,0.2)] bg-board/50 text-dim hover:text-gold"
+              }`}
+            >
+              ▶
+            </button>
+          </div>
+        </div>
+
+        {slide === 0 ? (
+          highlights.length === 0 ? (
+            <p className="text-xs italic text-dim">{t("recap.noHighlights")}</p>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {highlights.map((m, i) => {
+                const c = colorOf(m.player);
+                const meta = m.product ? productMeta(m.product) : null;
+                return (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 rounded-lg border border-[rgba(100,180,255,0.08)] bg-board/40 px-3 py-1.5 text-[12px]"
+                  >
+                    {meta && (
+                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-sm ${TONE_CLASSES[meta.tone]}`}>
+                        {meta.icon}
+                      </span>
+                    )}
+                    <span className={`shrink-0 font-display text-[10px] font-black uppercase tracking-wide ${c.text}`}>
+                      {m.player}
+                    </span>
+                    <span className="shrink-0">{highlightIcon(m.action)}</span>
+                    <span className="truncate text-bright">{highlightLabel(m)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )
         ) : (
           <div className="flex flex-col gap-1.5">
-            {highlights.map((m, i) => {
-              const c = colorOf(m.player);
-              const meta = m.product ? productMeta(m.product) : null;
+            {byBalance.map((p, i) => {
+              const c = colorOf(p.username);
+              const isHuman = humanPlayers?.includes(p.username) ?? false;
+              const rank = i + 1;
+              const rankMove = p.prev_rank == null ? null : rank - p.prev_rank;
+              const deltaCls = p.change > 0 ? "text-buy" : p.change < 0 ? "text-sell" : "text-dim";
               return (
                 <div
-                  key={i}
-                  className="flex items-center gap-2 rounded-lg border border-[rgba(100,180,255,0.08)] bg-board/40 px-3 py-1.5 text-[12px]"
+                  key={p.username}
+                  className="rounded-lg border border-[rgba(100,180,255,0.08)] bg-board/40 px-3 py-2 text-[13px]"
                 >
-                  {meta && (
-                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-sm ${TONE_CLASSES[meta.tone]}`}>
-                      {meta.icon}
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] ${
+                        rank <= 3
+                          ? "border-gold/30 bg-gold/15 text-gold"
+                          : "border-[rgba(100,180,255,0.15)] bg-board text-dim"
+                      }`}
+                    >
+                      {MEDALS[rank - 1] ?? rank}
                     </span>
-                  )}
-                  <span className={`shrink-0 font-display text-[10px] font-black uppercase tracking-wide ${c.text}`}>
-                    {m.player}
-                  </span>
-                  <span className="shrink-0">{highlightIcon(m.action)}</span>
-                  <span className="truncate text-bright">{highlightLabel(m)}</span>
+                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-black ${c.avatar}`}>
+                      {p.username.slice(0, 1).toUpperCase()}
+                    </span>
+                    <span className={`truncate font-semibold ${isHuman ? c.text : "text-bright"}`}>
+                      {p.username}
+                    </span>
+                    {rankMove != null && rankMove !== 0 && (
+                      <span className={`shrink-0 rounded px-1 text-[10px] font-black ${
+                        rankMove < 0 ? "bg-buy/15 text-buy" : "bg-sell/15 text-sell"
+                      }`}>
+                        {rankMove < 0 ? `▲ ${Math.abs(rankMove)}` : `▼ ${rankMove}`}
+                      </span>
+                    )}
+                    <span className="ml-auto shrink-0 font-display font-bold text-cyan">{money(p.balance)}</span>
+                    <span className={`w-24 shrink-0 text-right font-display font-bold ${deltaCls}`}>
+                      {p.change > 0 ? "▲ +" : p.change < 0 ? "▼ −" : ""}
+                      {p.change !== 0 ? money(Math.abs(p.change)) : "—"}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-board">
+                    <div
+                      className={`h-full rounded-full ${p.change >= 0 ? "bg-buy/70" : "bg-sell/70"}`}
+                      style={{ width: `${(Math.abs(p.change) / maxAbsChange) * 100}%` }}
+                    />
+                  </div>
                 </div>
               );
             })}
           </div>
         )}
-      </div>
-
-        {/* Standings with rank movement */}
-        <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-4">
-        <h3 className="mb-3 font-display text-sm font-bold uppercase tracking-wide">
-          {t("recap.positions")}
-        </h3>
-        <div className="flex flex-col gap-1.5">
-          {byBalance.map((p, i) => {
-            const c = colorOf(p.username);
-            const isHuman = humanPlayers?.includes(p.username) ?? false;
-            const rank = i + 1;
-            const rankMove = p.prev_rank == null ? null : rank - p.prev_rank;
-            const deltaCls = p.change > 0 ? "text-buy" : p.change < 0 ? "text-sell" : "text-dim";
-            return (
-              <div
-                key={p.username}
-                className="rounded-lg border border-[rgba(100,180,255,0.08)] bg-board/40 px-3 py-2 text-[13px]"
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] ${
-                      rank <= 3
-                        ? "border-gold/30 bg-gold/15 text-gold"
-                        : "border-[rgba(100,180,255,0.15)] bg-board text-dim"
-                    }`}
-                  >
-                    {MEDALS[rank - 1] ?? rank}
-                  </span>
-                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-black ${c.avatar}`}>
-                    {p.username.slice(0, 1).toUpperCase()}
-                  </span>
-                  <span className={`truncate font-semibold ${isHuman ? c.text : "text-bright"}`}>
-                    {p.username}
-                  </span>
-                  {rankMove != null && rankMove !== 0 && (
-                    <span className={`shrink-0 rounded px-1 text-[10px] font-black ${
-                      rankMove < 0 ? "bg-buy/15 text-buy" : "bg-sell/15 text-sell"
-                    }`}>
-                      {rankMove < 0 ? `▲ ${Math.abs(rankMove)}` : `▼ ${rankMove}`}
-                    </span>
-                  )}
-                  <span className="ml-auto shrink-0 font-display font-bold text-cyan">{money(p.balance)}</span>
-                  <span className={`w-24 shrink-0 text-right font-display font-bold ${deltaCls}`}>
-                    {p.change > 0 ? "▲ +" : p.change < 0 ? "▼ −" : ""}
-                    {p.change !== 0 ? money(Math.abs(p.change)) : "—"}
-                  </span>
-                </div>
-                <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-board">
-                  <div
-                    className={`h-full rounded-full ${p.change >= 0 ? "bg-buy/70" : "bg-sell/70"}`}
-                    style={{ width: `${(Math.abs(p.change) / maxAbsChange) * 100}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        </div>
       </div>
 
       {/* Section separator */}
