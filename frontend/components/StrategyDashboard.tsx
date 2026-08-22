@@ -15,6 +15,7 @@ import {
   rollForBuy,
   rollForSell,
 } from "@/lib/dice";
+import { useI18n } from "@/lib/i18n";
 
 interface StrategyDashboardProps {
   game: GameState;
@@ -46,12 +47,6 @@ const DIST: { roll: number; prob: number }[] = [
   { roll: 12, prob: 1 },
 ].map((d) => ({ roll: d.roll, prob: d.prob / 36 }));
 
-const ACTION_LABEL: Record<MarketAction, string> = {
-  buy: "BUY",
-  sell: "SELL",
-  skip: "SKIP",
-};
-
 export default function StrategyDashboard({
   game,
   planner,
@@ -65,6 +60,7 @@ export default function StrategyDashboard({
 }: StrategyDashboardProps) {
   const markets = game.markets;
   const players = game.players;
+  const { t } = useI18n();
 
   const ownedProducts = useMemo(() => {
     const map: Record<string, number> = {};
@@ -109,10 +105,10 @@ export default function StrategyDashboard({
     chosenActions.length === 0
       ? "—"
       : avgProb >= 0.6
-      ? "LOW"
+      ? t("plan.riskLow")
       : avgProb >= 0.35
-      ? "MEDIUM"
-      : "HIGH";
+      ? t("plan.riskMedium")
+      : t("plan.riskHigh");
   const riskCls =
     risk === "LOW"
       ? "text-buy"
@@ -145,7 +141,7 @@ export default function StrategyDashboard({
           <span className="block text-[9px] text-dim">{m.name}</span>
         </span>
         <span className="shrink-0 rounded-md bg-board/70 px-1.5 py-0.5 font-display text-[9px] font-black tracking-wider">
-          {sel === "buy" ? "⬇ BUY" : sel === "sell" ? "⬆ SELL" : "— SKIP"}
+          {sel === "buy" ? t("plan.buyBadge") : sel === "sell" ? t("plan.sellBadge") : t("plan.skipBadge")}
         </span>
       </button>
     );
@@ -196,24 +192,28 @@ export default function StrategyDashboard({
         <div className="mt-2.5 grid grid-cols-2 gap-2">
           <div className="rounded-lg border border-buy/20 bg-buy/5 p-2">
             <p className="font-display text-[9px] font-black uppercase tracking-wider text-buy">
-              Buy succeeds on
+              {t("plan.buySucceedsOn")}
             </p>
             <p className="mt-0.5 font-display text-base font-bold text-bright">
               {buyRoll}–12
             </p>
-            <p className="text-[9px] text-dim">dice price ≥ {moneyShort(m.market_fixed_price)}</p>
+            <p className="text-[9px] text-dim">
+              {t("plan.dicePriceGte", { price: moneyShort(m.market_fixed_price) })}
+            </p>
             <p className="mt-1 font-display text-sm font-black text-buy">
               {probLabel(buyProb)}
             </p>
           </div>
           <div className="rounded-lg border border-sell/20 bg-sell/5 p-2">
             <p className="font-display text-[9px] font-black uppercase tracking-wider text-sell">
-              Sell succeeds on
+              {t("plan.sellSucceedsOn")}
             </p>
             <p className="mt-0.5 font-display text-base font-bold text-bright">
               2–{sellRoll}
             </p>
-            <p className="text-[9px] text-dim">dice price ≤ {moneyShort(m.market_fixed_price)}</p>
+            <p className="text-[9px] text-dim">
+              {t("plan.dicePriceLte", { price: moneyShort(m.market_fixed_price) })}
+            </p>
             <p className="mt-1 font-display text-sm font-black text-sell">
               {probLabel(sellProb)}
             </p>
@@ -222,7 +222,7 @@ export default function StrategyDashboard({
 
         {sel === "sell" && (
           <p className="mt-1.5 text-[10px] text-amberc">
-            ⚠ Sell entry fee: {moneyShort(m.sell_entry_fee)} (paid even if sale fails)
+            {t("plan.entryFeeWarn", { fee: moneyShort(m.sell_entry_fee) })}
           </p>
         )}
 
@@ -250,25 +250,26 @@ export default function StrategyDashboard({
                     : "border-[rgba(100,180,255,0.12)] bg-card text-dim hover:text-bright"
                 } ${disabled ? "cursor-not-allowed opacity-30" : ""}`}
               >
-                {selected ? "✓ " : ""}{ACTION_LABEL[a]}
+                {selected ? "✓ " : ""}
+                {a === "buy" ? t("plan.buy") : a === "sell" ? t("plan.sell") : t("plan.skip")}
               </button>
             );
           })}
         </div>
         {sel === "sell" && (
           <p className="mt-1 text-[10px] text-dim">
-            you own <b className="text-bright">{owned}</b> {m.product}
+            {t("plan.youOwn", { qty: owned, product: m.product })}
           </p>
         )}
         {canSell && (
           <p className="mt-1.5 flex items-center justify-between rounded-md border border-[rgba(100,180,255,0.08)] bg-board/40 px-2 py-1 text-[10px]">
             <span className="text-dim">
-              cost basis <b className="text-bright">{money(avgCost)}</b>/u
+              {t("plan.costBasis", { cost: money(avgCost) })}
             </span>
             <span className={profit != null && profit >= 0 ? "text-buy" : "text-sell"}>
               {profit != null
-                ? `vs market ${profit >= 0 ? "+" : ""}${money(profit)}/u`
-                : "no cost recorded"}
+                ? t("plan.vsMarket", { signed: `${profit >= 0 ? "+" : ""}${money(profit)}` })
+                : t("plan.noCost")}
             </span>
           </p>
         )}
@@ -277,13 +278,13 @@ export default function StrategyDashboard({
   };
 
   return (
-    <div className="grid w-full grid-cols-1 gap-4 lg:grid-cols-[17rem_minmax(0,1fr)_17rem]">
+    <div className="grid w-full grid-cols-1 gap-4 lg:h-full lg:min-h-0 lg:grid-cols-[17rem_minmax(0,1fr)_17rem]">
       {/* ---------- LEFT: player + markets ---------- */}
-      <div className="flex flex-col gap-4">
+      <div className="flex min-h-0 flex-col gap-4 lg:overflow-y-auto">
         {/* You */}
         <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3">
           <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">
-            You
+            {t("plan.you")}
           </p>
           <div className="mt-1 flex flex-wrap gap-1.5">
             {plannerPlayer?.inventory.map((it) => (
@@ -298,7 +299,7 @@ export default function StrategyDashboard({
             ))}
           </div>
           <p className="mt-2 text-[11px] text-dim">
-            Cash{" "}
+            {t("plan.cash")}{" "}
             <span className="font-display text-sm font-bold text-gold">
               {money(plannerPlayer?.balance ?? 0)}
             </span>
@@ -308,7 +309,7 @@ export default function StrategyDashboard({
         {/* Active markets */}
         <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3">
           <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">
-            Active markets ({markets.length})
+            {t("plan.activeMarkets", { count: markets.length })}
           </p>
           <div className="mt-2 flex flex-col gap-1.5">
             {markets.map((m) => (
@@ -320,7 +321,11 @@ export default function StrategyDashboard({
                   <span className="font-display font-bold text-cyan">{moneyShort(m.market_fixed_price)}</span>
                 </div>
                 <div className="mt-0.5 text-[9px] text-dim">
-                  Supply: {m.market_supply}u · Tax: {Math.round(m.tax_rate * 100)}% · Fee: {moneyShort(m.sell_entry_fee)}
+                  {t("plan.supply", {
+                    supply: m.market_supply,
+                    tax: Math.round(m.tax_rate * 100),
+                    fee: moneyShort(m.sell_entry_fee),
+                  })}
                 </div>
                 {planBtn(m)}
               </div>
@@ -331,7 +336,7 @@ export default function StrategyDashboard({
         {/* Inventory */}
         <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3">
           <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">
-            Inventory ({plannerPlayer?.inventory.length ?? 0} items)
+            {t("plan.inventory", { count: plannerPlayer?.inventory.length ?? 0 })}
           </p>
           <div className="mt-2 flex flex-col gap-1">
             {plannerPlayer?.inventory.map((it) => {
@@ -355,14 +360,14 @@ export default function StrategyDashboard({
       </div>
 
       {/* ---------- CENTER: trades + summary ---------- */}
-      <div className="flex flex-col gap-4">
+      <div className="flex min-h-0 flex-col gap-4 lg:overflow-y-auto">
         {/* Trade cards */}
         <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3">
           <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">
-            Plan your trades
+            {t("plan.title")}
           </p>
           <p className="mt-0.5 text-[10px] text-dim">
-            Choose an action for each market. Your dice roll decides if it succeeds.
+            {t("plan.subtitle")}
           </p>
           <div className="mt-2 flex flex-col gap-2">
             {markets.map(tradeCard)}
@@ -372,7 +377,7 @@ export default function StrategyDashboard({
         {/* Plan summary + confirm */}
         <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3">
           <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">
-            Your plan summary
+            {t("plan.summary")}
           </p>
           <div className="mt-2 flex flex-col gap-1.5">
             {markets.map((m) => {
@@ -394,7 +399,11 @@ export default function StrategyDashboard({
                     {productMeta(m.product).icon} {m.product}
                   </span>
                   <span className="shrink-0 font-black uppercase">
-                    {a === "buy" ? `Buy · needs ${buyRoll}+` : a === "sell" ? `Sell · needs 2–${sellRoll}` : "Skip · no action"}
+                    {a === "buy"
+                      ? t("plan.buyNeeds", { roll: buyRoll })
+                      : a === "sell"
+                      ? t("plan.sellNeeds", { roll: sellRoll })
+                      : t("plan.skipAction")}
                   </span>
                 </div>
               );
@@ -403,15 +412,15 @@ export default function StrategyDashboard({
 
           <div className="mt-2.5 grid grid-cols-3 gap-2 text-center text-[10px]">
             <div className="rounded-lg bg-board/50 p-1.5">
-              <p className="text-dim">Est. fees</p>
+              <p className="text-dim">{t("plan.estFees")}</p>
               <p className="font-display font-bold text-bright">{moneyShort(planSellFees)}</p>
             </div>
             <div className="rounded-lg bg-board/50 p-1.5">
-              <p className="text-dim">Risk</p>
+              <p className="text-dim">{t("plan.risk")}</p>
               <p className={`font-display font-bold ${riskCls}`}>{risk}</p>
             </div>
             <div className="rounded-lg bg-board/50 p-1.5">
-              <p className="text-dim">Actions</p>
+              <p className="text-dim">{t("plan.actions")}</p>
               <p className="font-display font-bold text-gold">{chosen}</p>
             </div>
           </div>
@@ -423,23 +432,23 @@ export default function StrategyDashboard({
             className="mt-2.5 w-full rounded-xl bg-gold py-2.5 font-display text-sm font-bold uppercase tracking-widest text-deep shadow-glow-gold transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-50"
           >
             {busy
-              ? "Resolving…"
+              ? t("plan.resolving")
               : !canSubmit
-              ? "Waiting…"
-              : `Confirm ${Math.max(1, markets.length)} move${markets.length > 1 ? "s" : ""}`}
+              ? t("plan.waiting")
+              : t("plan.confirm", { count: Math.max(1, markets.length) })}
           </button>
           <p className="mt-1 text-center text-[9px] text-dim">
-            {chosen}/{markets.length} planned · you can change any choice before confirming
+            {t("plan.planned", { chosen, total: markets.length })}
           </p>
         </div>
       </div>
 
       {/* ---------- RIGHT: players + rules + inventory ---------- */}
-      <div className="flex flex-col gap-4">
+      <div className="flex min-h-0 flex-col gap-4 lg:overflow-y-auto">
         {/* Players — ranked by cash so you can see who's winning */}
         <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3">
           <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">
-            Players
+            {t("players")}
           </p>
           <div className="mt-2 flex flex-col gap-1">
             {[...players]
@@ -476,7 +485,7 @@ export default function StrategyDashboard({
                     <span className={`truncate font-semibold ${isPlanner ? c.text : "text-bright"}`}>
                       {p.username}
                     </span>
-                    {isHuman && <span className="text-[8px] font-bold text-gold/80">YOU</span>}
+                    {isHuman && <span className="text-[8px] font-bold text-gold/80">{t("plan.youTag")}</span>}
                     <span className="ml-auto shrink-0 font-display font-bold text-cyan">
                       {moneyShort(p.balance)}
                     </span>
@@ -489,38 +498,18 @@ export default function StrategyDashboard({
           </div>
         </div>
 
-        {/* How trading works */}
-        <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3 text-[10px]">
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">
-            How trading works
-          </p>
-          <div className="mt-2 flex flex-col gap-2 text-dim">
-            <p>
-              <span className="font-black text-buy">BUY</span> — if dice price ≥ market
-              price, you buy at the market price (plus tax).
-            </p>
-            <p>
-              <span className="font-black text-sell">SELL</span> — if dice price ≤ market
-              price, market buys at your dice price (minus tax), after entry fee.
-            </p>
-            <p>
-              <span className="font-black text-dim">SKIP</span> — do nothing at this market.
-            </p>
-          </div>
-        </div>
-
         {/* Your next roll + probability guide */}
         <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3 text-center">
           <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">
-            Your next roll (2d6)
+            {t("plan.nextRoll")}
           </p>
-          <p className="mt-1 font-display text-xl font-black text-gold">2–12</p>
-          <p className="text-[11px] text-bright">200 – 1,200 FCFA</p>
-          <p className="text-[10px] text-dim">dice price = total × 100 FCFA</p>
+          <p className="mt-1 font-display text-xl font-black text-gold">{t("plan.rollRange")}</p>
+          <p className="text-[11px] text-bright">{t("plan.rollPrice")}</p>
+          <p className="text-[10px] text-dim">{t("plan.rollFormula")}</p>
 
           {/* Probability guide bars */}
           <p className="mt-3 font-display text-[9px] font-bold uppercase tracking-[0.3em] text-dim">
-            Probability guide (2d6)
+            {t("plan.probGuide")}
           </p>
           <div className="mt-1.5 flex items-end justify-center gap-0.5">
             {DIST.map((d) => (

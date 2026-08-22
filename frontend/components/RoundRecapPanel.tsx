@@ -2,6 +2,7 @@
 
 import type { RoundRecap } from "@/lib/types";
 import { money, playerColor } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 interface RoundRecapPanelProps {
   recap: RoundRecap;
@@ -20,6 +21,7 @@ export default function RoundRecapPanel({
   busy,
   onNext,
 }: RoundRecapPanelProps) {
+  const { t } = useI18n();
   const sorted = [...recap.players].sort((a, b) => b.change - a.change);
   const leader = sorted[0];
   const laggard = sorted[sorted.length - 1];
@@ -31,10 +33,10 @@ export default function RoundRecapPanel({
       {/* Header */}
       <div className="mb-4 text-center">
         <span className="font-display text-[11px] font-bold uppercase tracking-[0.3em] text-gold">
-          📊 Round {recap.round} complete
+          {t("recap.roundComplete", { round: recap.round })}
         </span>
         <h2 className="mt-1 font-display text-2xl font-black uppercase tracking-wider text-shimmer">
-          What happened
+          {t("recap.whatHappened")}
         </h2>
       </div>
 
@@ -42,7 +44,7 @@ export default function RoundRecapPanel({
       <div className="mb-4 grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-buy/30 bg-buy/5 p-4 text-center">
           <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-buy">
-            📈 Best of the round
+            {t("recap.best")}
           </p>
           <p className="mt-1 font-display text-lg font-black text-buy">{leader.username}</p>
           <p className="text-sm font-bold text-bright">
@@ -52,7 +54,7 @@ export default function RoundRecapPanel({
         </div>
         <div className="rounded-2xl border border-sell/30 bg-sell/5 p-4 text-center">
           <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-sell">
-            📉 Fell behind
+            {t("recap.fellBehind")}
           </p>
           <p className="mt-1 font-display text-lg font-black text-sell">{laggard.username}</p>
           <p className="text-sm font-bold text-bright">
@@ -65,7 +67,7 @@ export default function RoundRecapPanel({
       {/* Per-player rows */}
       <div className="mb-4 rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-4">
         <h3 className="mb-3 font-display text-sm font-bold uppercase tracking-wide">
-          Balances
+          {t("recap.balances")}
         </h3>
         <div className="flex flex-col gap-1.5">
           {sorted.map((p) => {
@@ -80,7 +82,7 @@ export default function RoundRecapPanel({
                 <span className={`truncate font-semibold ${isHuman ? c.text : "text-bright"}`}>
                   {p.username}
                 </span>
-                {isHuman && <span className="text-[8px] font-bold text-gold/80">YOU</span>}
+                {isHuman && <span className="text-[8px] font-bold text-gold/80">{t("plan.youTag")}</span>}
                 <span className="ml-auto font-display font-bold text-cyan">{money(p.balance)}</span>
                 <span className={`w-24 shrink-0 text-right font-display font-bold ${deltaCls}`}>
                   {p.change > 0 ? "▲ +" : p.change < 0 ? "▼ −" : ""}
@@ -96,7 +98,7 @@ export default function RoundRecapPanel({
       {recap.news.length > 0 && (
         <div className="mb-4 rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-4">
           <h3 className="mb-2 font-display text-sm font-bold uppercase tracking-wide">
-            📰 Market news
+            {t("recap.marketNews")}
           </h3>
           <div className="flex flex-col gap-1.5">
             {recap.news.map((n, i) => (
@@ -127,8 +129,8 @@ export default function RoundRecapPanel({
         {busy
           ? "…"
           : recap.is_last
-          ? "🏆 See Final Results"
-          : `▶ Start Round ${recap.round + 1}`}
+          ? t("recap.seeResults")
+          : t("recap.startNext", { round: recap.round + 1 })}
       </button>
     </div>
   );

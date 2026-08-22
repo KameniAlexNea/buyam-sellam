@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { GameState } from "@/lib/types";
 import { money, moneyShort, playerColor, productMeta, TONE_CLASSES } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import Dice from "./Dice";
 
 interface ActionDashboardProps {
@@ -21,6 +22,7 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
     game.can_buy ? (game.max_affordable ?? 1) : (game.seller_qty ?? 1)
   );
   const [qty, setQty] = useState(maxQty);
+  const { t } = useI18n();
 
   const dieTotal = game.dice_total;
   const die1 = dieTotal ? Math.ceil(dieTotal / 2) : null;
@@ -83,12 +85,12 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
                 </span>
               )}
               <div className="text-left">
-                <p className="text-sm font-bold text-sell">❌ Trade didn't go through</p>
+                <p className="text-sm font-bold text-sell">{t("action.failed")}</p>
                 <p className="mt-1 text-[11px] text-bright">{game.action_fail_reason}</p>
               </div>
             </div>
             <p className="text-[10px] text-dim">
-              🎲 Rolled {game.dice_total} → dice price {money(game.dice_price ?? 0)}
+              {t("action.rolled", { dice: game.dice_total, price: money(game.dice_price ?? 0) })}
             </p>
             <button
               type="button"
@@ -96,7 +98,7 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
               disabled={busy}
               className="rounded-xl bg-dim px-8 py-2 font-display text-xs font-bold uppercase tracking-widest text-white transition-all hover:brightness-110 active:scale-95 disabled:opacity-50"
             >
-              {busy ? "…" : "Continue"}
+              {busy ? "…" : t("action.continue")}
             </button>
           </div>
         </div>
@@ -106,11 +108,11 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
   }
 
   return (
-    <div className="grid w-full grid-cols-1 gap-4 lg:grid-cols-[17rem_minmax(0,1fr)_17rem]">
+    <div className="grid w-full grid-cols-1 gap-4 lg:h-full lg:min-h-0 lg:grid-cols-[17rem_minmax(0,1fr)_17rem]">
       {/* LEFT: player */}
-      <div className="flex flex-col gap-4">
+      <div className="flex min-h-0 flex-col gap-4 lg:overflow-y-auto">
         <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3">
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">Trading</p>
+          <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">{t("action.trading")}</p>
           <div className={`mt-2 flex items-center gap-2 ${pc.avatar} h-12 w-12 rounded-full`}>
             <span className="w-full text-center font-display text-lg font-black">
               {actor.slice(0, 1).toUpperCase()}
@@ -118,7 +120,7 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
           </div>
           <p className={`mt-2 truncate font-display text-sm font-bold ${pc.text}`}>{actor}</p>
           <p className="mt-1 text-[11px] text-dim">
-            Balance{" "}
+            {t("action.balance")}{" "}
             <span className="font-display text-sm font-bold text-gold">{money(balance)}</span>
           </p>
           {player && player.inventory.length > 0 && (
@@ -139,13 +141,13 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
       </div>
 
       {/* CENTER */}
-      <div className="flex flex-col gap-4">
+      <div className="flex min-h-0 flex-col gap-4 lg:overflow-y-auto">
         <MarketCard market={market} meta={meta} trendLabel={trendLabel} trendUp={trendUp} trendDown={trendDown} />
 
         {/* Dice */}
         <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3">
           <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">
-            Your dice (2d6)
+            {t("action.yourDice")}
           </p>
           <div className="mt-2 flex flex-wrap items-center justify-center gap-4">
             <Dice die1={die1} die2={die2} total={dieTotal} size="lg" rolling />
@@ -153,7 +155,7 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
               <p className="font-display text-2xl font-black text-gold">
                 {dieTotal ?? "—"}
               </p>
-              <p className="text-[10px] text-dim">→ dice price</p>
+              <p className="text-[10px] text-dim">{t("action.dicePrice")}</p>
               <p className="font-display text-base font-bold text-cyan">{money(dicePrice)}</p>
             </div>
           </div>
@@ -163,30 +165,32 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
         <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3">
           <div className="flex items-center justify-between">
             <p className={`font-display text-sm font-black uppercase tracking-wide ${isBuy ? "text-buy" : "text-sell"}`}>
-              {isBuy ? "⬇ Buy" : "⬆ Sell"} {market?.product}
+              {isBuy
+                ? t("action.buyProduct", { product: market?.product ?? "" })
+                : t("action.sellProduct", { product: market?.product ?? "" })}
             </p>
             <p className={`text-[10px] font-bold ${isBuy ? "text-buy" : "text-sell"}`}>
               {isBuy
-                ? `dice ${money(dicePrice)} ≥ ${money(marketPrice)} needed`
-                : `dice ${money(dicePrice)} ≤ ${money(marketPrice)}`}
+                ? t("action.diceNeededBuy", { dice: money(dicePrice), price: money(marketPrice) })
+                : t("action.diceNeededSell", { dice: money(dicePrice), price: money(marketPrice) })}
             </p>
           </div>
 
           <div className="mt-2 rounded-lg border border-[rgba(100,180,255,0.08)] bg-board/40 p-2 text-[11px]">
             {isBuy ? (
               <p className="text-buy">
-                ✅ Success — dice price {money(dicePrice)} ≥ market {money(marketPrice)}
+                {t("action.successBuy", { dice: money(dicePrice), price: money(marketPrice) })}
               </p>
             ) : (
               <p className="text-sell">
-                ✅ Success — dice price {money(dicePrice)} ≤ market {money(marketPrice)}
+                {t("action.successSell", { dice: money(dicePrice), price: money(marketPrice) })}
               </p>
             )}
           </div>
 
           {/* Quantity */}
           <div className="mt-3 flex items-center justify-center gap-2">
-            <span className="text-[10px] uppercase tracking-wider text-dim">Quantity</span>
+            <span className="text-[10px] uppercase tracking-wider text-dim">{t("action.quantity")}</span>
             <button
               type="button"
               onClick={() => setQty((q) => Math.max(1, q - 1))}
@@ -211,39 +215,39 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
             >
               +
             </button>
-            <span className="text-[10px] text-dim">max {maxQty}</span>
+            <span className="text-[10px] text-dim">{t("action.max", { max: maxQty })}</span>
           </div>
 
           {/* Breakdown */}
           <div className="mt-3 space-y-1 rounded-lg border border-[rgba(100,180,255,0.08)] bg-board/40 p-2 text-[11px]">
             {isBuy ? (
               <>
-                <Row label={`Cost (${qty} × ${moneyShort(unitPrice)})`} value={`−${money(gross)}`} />
-                <Row label={`Tax (${Math.round(taxRate * 100)}%)`} value={`−${money(tax)}`} />
-                <Row label="Total" value={`${money(total)}`} strong />
+                <Row label={t("action.cost", { qty, price: moneyShort(unitPrice) })} value={`−${money(gross)}`} />
+                <Row label={t("action.tax", { pct: Math.round(taxRate * 100) })} value={`−${money(tax)}`} />
+                <Row label={t("action.total")} value={`${money(total)}`} strong />
               </>
             ) : (
               <>
                 <Row
-                  label="Cost basis"
+                  label={t("action.costBasis")}
                   value={`${money(avgCost)}/u`}
-                  note={`you paid ${money(avgCost * qty)} for ${qty}u`}
+                  note={t("action.youPaid", { cost: money(avgCost * qty), qty })}
                 />
                 {profitTotal != null && (
                   <Row
-                    label="Profit vs sell price"
+                    label={t("action.profitVsSell")}
                     value={`${profitTotal >= 0 ? "+" : ""}${money(profitTotal)}`}
                     accent
                     note={`${moneyShort(profitPerUnit ?? 0)}/u`}
                   />
                 )}
-                <Row label={`Revenue (${qty} × ${moneyShort(unitPrice)})`} value={`+${money(gross)}`} />
-                <Row label={`Entry fee`} value={`−${money(entryFee)}`} note="paid at entry" />
-                <Row label={`Tax (${Math.round(taxRate * 100)}%)`} value={`−${money(tax)}`} />
-                <Row label="You receive" value={`+${money(total)}`} strong />
+                <Row label={t("action.revenue", { qty, price: moneyShort(unitPrice) })} value={`+${money(gross)}`} />
+                <Row label={t("action.entryFee")} value={`−${money(entryFee)}`} note={t("action.paidAtEntry")} />
+                <Row label={t("action.tax", { pct: Math.round(taxRate * 100) })} value={`−${money(tax)}`} />
+                <Row label={t("action.youReceive")} value={`+${money(total)}`} strong />
               </>
             )}
-            <Row label="New balance" value={money(newBalance)} accent />
+            <Row label={t("action.newBalance")} value={money(newBalance)} accent />
           </div>
 
           <button
@@ -256,7 +260,11 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
                 : "bg-sell text-white shadow-[0_0_16px_rgba(255,77,106,0.4)]"
             }`}
           >
-            {busy ? "…" : `${isBuy ? "Buy" : "Sell"} ${qty} ${market?.product ?? ""}`.trim()}
+            {busy
+              ? "…"
+              : isBuy
+              ? t("action.buyQty", { qty, product: market?.product ?? "" })
+              : t("action.sellQty", { qty, product: market?.product ?? "" })}
           </button>
         </div>
       </div>
@@ -314,10 +322,11 @@ function MarketCard({
   trendUp: boolean;
   trendDown: boolean;
 }) {
+  const { t } = useI18n();
   if (!market || !meta) {
     return (
       <div className="flex items-center justify-center rounded-2xl border border-dashed border-[rgba(100,180,255,0.12)] bg-board/30 p-4 text-[11px] text-dim">
-        No market active this round
+        {t("action.noMarket")}
       </div>
     );
   }
@@ -336,7 +345,11 @@ function MarketCard({
       <div className="shrink-0 text-right">
         <p className="font-display text-xl font-black text-cyan">{moneyShort(market.market_fixed_price)}</p>
         <p className="text-[10px] text-dim">
-          {market.market_supply}u · tax {Math.round(market.tax_rate * 100)}% · fee {moneyShort(market.sell_entry_fee)}
+          {t("action.marketInfo", {
+            supply: market.market_supply,
+            tax: Math.round(market.tax_rate * 100),
+            fee: moneyShort(market.sell_entry_fee),
+          })}
         </p>
       </div>
     </div>
@@ -355,15 +368,16 @@ function PlayerSideBar({
   balance: number;
 }) {
   const player = game.players.find((p) => p.username === actor);
+  const { t } = useI18n();
   return (
     <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3">
-      <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">Trading</p>
+      <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">{t("action.trading")}</p>
       <div className={`mt-2 flex h-12 w-12 items-center justify-center rounded-full ${pc.avatar}`}>
         <span className="font-display text-lg font-black">{actor.slice(0, 1).toUpperCase()}</span>
       </div>
       <p className={`mt-2 truncate font-display text-sm font-bold ${pc.text}`}>{actor}</p>
       <p className="mt-1 text-[11px] text-dim">
-        Balance <span className="font-display text-sm font-bold text-gold">{money(balance)}</span>
+        {t("action.balance")} <span className="font-display text-sm font-bold text-gold">{money(balance)}</span>
       </p>
       {player && player.inventory.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
@@ -386,10 +400,11 @@ function PlayersSideBar({ game, actor }: { game: GameState; actor: string }) {
   const others = [...game.players]
     .filter((p) => p.username !== actor)
     .sort((a, b) => b.balance - a.balance);
+  const { t } = useI18n();
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-h-0 flex-col gap-4 lg:overflow-y-auto">
       <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-3">
-        <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">Players</p>
+        <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-gold">{t("players")}</p>
         <div className="mt-2 flex flex-col gap-1.5">
           {others.map((p) => {
             const c = playerColor(Math.max(0, game.players.findIndex((x) => x.username === p.username)));

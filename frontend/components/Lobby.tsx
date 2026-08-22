@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 import type { Difficulties, Difficulty, StrategyInfo } from "@/lib/types";
 import { buildSavedGame, clearGame, loadGame, saveGame, type SavedGame } from "@/lib/storage";
 import GameHeader from "./GameHeader";
@@ -51,6 +52,7 @@ interface BotRow {
 
 export default function Lobby() {
   const router = useRouter();
+  const { t } = useI18n();
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [rounds, setRounds] = useState(10);
   const [humans, setHumans] = useState<string[]>(["You"]);
@@ -263,7 +265,7 @@ export default function Lobby() {
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-6">
       {/* Game-style header */}
-      <GameHeader back={false} subtitle="New Game" />
+      <GameHeader back={false} subtitle={t("lobby.subtitle")} />
 
       {/* Hero */}
       <section
@@ -337,15 +339,15 @@ export default function Lobby() {
         {/* Setup card */}
         <section className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-6 shadow-card">
           <span className="font-display text-[11px] font-bold uppercase tracking-[0.25em] text-gold">
-            ⚙️ Game Setup
+            {t("lobby.setup")}
           </span>
           <h2 className="mt-1 font-display text-xl font-bold uppercase">
-            Configure the table
+            {t("lobby.configure")}
           </h2>
 
           {/* Difficulty */}
           <div className="mt-5">
-            <p className="mb-2 text-sm font-semibold text-bright">Difficulty</p>
+            <p className="mb-2 text-sm font-semibold text-bright">{t("lobby.difficulty")}</p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {DIFFICULTIES.map((d) => (
                 <button
@@ -362,15 +364,17 @@ export default function Lobby() {
                     {d.label}
                   </p>
                   <p className="mt-1 text-[11px] leading-snug text-dim">
-                    {d.blurb}
+                    {t(`diff.${d.value}.blurb`)}
                   </p>
                   <p className="mt-2 font-mono text-[11px] text-buy">
-                    {d.cash.toLocaleString()} FCFA start
+                    {t("diff.cashStart", { amount: d.cash.toLocaleString() })}
                   </p>
                   {difficulties && (
                     <p className="mt-1 font-mono text-[11px] text-cyan">
-                      {difficulties[d.value].bot_range[0]}–
-                      {difficulties[d.value].bot_range[1]} opponents
+                      {t("lobby.opponentsRange", {
+                        min: difficulties[d.value].bot_range[0],
+                        max: difficulties[d.value].bot_range[1],
+                      })}
                     </p>
                   )}
                 </button>
@@ -378,8 +382,7 @@ export default function Lobby() {
             </div>
             {rosterLocked && (
               <p className="mt-2 text-[11px] leading-snug text-dim">
-                🔒 This level fixes the bot roster — you can only change the
-                number of opponents.
+                {t("lobby.difficultyLocked")}
               </p>
             )}
           </div>
@@ -387,7 +390,7 @@ export default function Lobby() {
           {/* Rounds */}
           <div className="mt-6">
             <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-semibold text-bright">Rounds</p>
+              <p className="text-sm font-semibold text-bright">{t("lobby.rounds")}</p>
               <span className="rounded-lg bg-board px-2.5 py-0.5 font-display text-sm font-bold text-gold">
                 {rounds}
               </span>
@@ -407,33 +410,32 @@ export default function Lobby() {
           </div>
 
           <p className="mt-6 rounded-xl border border-[rgba(100,180,255,0.1)] bg-board/40 p-3 text-[11px] leading-relaxed text-dim">
-            🎮 Hot-seat multiplayer: each human player takes their own turn
-            planning trades on the same screen. Bots play their AI strategy
-            automatically.
+            {t("lobby.hotseat")}
           </p>
         </section>
 
         {/* Players card */}
         <section className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-6 shadow-card">
           <span className="font-display text-[11px] font-bold uppercase tracking-[0.25em] text-gold">
-            👥 Players
+            {t("lobby.playersTitle")}
           </span>
           <h2 className="mt-1 font-display text-xl font-bold uppercase">
-            Who's at the table?
+            {t("lobby.whosAtTable")}
           </h2>
 
           {/* Human players */}
           <div className="mt-5">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-sm font-semibold text-bright">
-                Players <span className="text-dim">({humans.length})</span>
+                {t("players")}{" "}
+                <span className="text-dim">({humans.length})</span>
               </p>
               <button
                 type="button"
                 onClick={addHuman}
                 className="rounded-lg border border-gold/30 bg-gold/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-gold transition-colors hover:bg-gold/20"
               >
-                + Add player
+                {t("lobby.addPlayer")}
               </button>
             </div>
 
@@ -472,7 +474,8 @@ export default function Lobby() {
           <div className="mt-6">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-sm font-semibold text-bright">
-                Bot opponents <span className="text-dim">({bots.length})</span>
+                {t("lobby.botOpponents")}{" "}
+                <span className="text-dim">({bots.length})</span>
               </p>
               <button
                 type="button"
@@ -480,15 +483,15 @@ export default function Lobby() {
                 disabled={allowedStrategies.length === 0 || bots.length >= maxBots}
                 className="rounded-lg border border-gold/30 bg-gold/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-gold transition-colors hover:bg-gold/20 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                + Add bot
+                {t("lobby.addBot")}
               </button>
             </div>
 
             {difficulties && (
               <p className="mb-2 text-[11px] leading-snug text-dim">
                 {humanCount >= 2
-                  ? `Multiple humans at the table — bot limit lifted (up to ${maxBots}).`
-                  : `This level seats ${minBots}–${maxBots} bots.`}
+                  ? t("lobby.multiHumans", { max: maxBots })
+                  : t("lobby.seats", { min: minBots, max: maxBots })}
               </p>
             )}
 
@@ -542,7 +545,7 @@ export default function Lobby() {
 
               {bots.length === 0 && (
                 <p className="text-xs italic text-dim">
-                  No bots — just you humans. Add one to fill an empty seat.
+                  {t("lobby.noBots")}
                 </p>
               )}
             </div>
@@ -550,14 +553,14 @@ export default function Lobby() {
 
           <p className="mt-4 text-xs leading-relaxed text-dim">
             {difficulties
-              ? `${difficulties[difficulty].label} bots: ${difficulties[
-                  difficulty
-                ].bot_pool
-                  .map((s) => s.label)
-                  .join(" · ")}.`
-              : "Loading bot roster…"}
-            {rosterLocked &&
-              " You can only change the number of opponents — the roster is fixed."}
+              ? t("lobby.botRoster", {
+                  label: difficulties[difficulty].label,
+                  list: difficulties[difficulty].bot_pool
+                    .map((s) => s.label)
+                    .join(" · "),
+                })
+              : t("lobby.loadingRoster")}
+            {rosterLocked && t("lobby.rosterLocked")}
           </p>
         </section>
       </div>
@@ -575,7 +578,7 @@ export default function Lobby() {
           disabled={creating}
           className="rounded-2xl bg-gold px-12 py-4 font-display text-lg font-black uppercase tracking-widest text-deep shadow-glow-gold transition-all hover:brightness-110 active:scale-95 disabled:opacity-50"
         >
-          {creating ? "Dealing the markets…" : "🎲 Start Game"}
+          {creating ? t("lobby.dealing") : t("lobby.startGame")}
         </button>
       </div>
     </div>

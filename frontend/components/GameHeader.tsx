@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useI18n } from "@/lib/i18n";
 import HelpLink from "./HelpLink";
+import LangToggle from "./LangToggle";
 
 interface GameHeaderProps {
   /** Left-side badge(s), e.g. Round / difficulty / phase. Shown next to the back link. */
@@ -28,6 +30,7 @@ export default function GameHeader({
   help = true,
   subtitle,
 }: GameHeaderProps) {
+  const { t } = useI18n();
   return (
     <header className="relative flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[rgba(100,180,255,0.14)] bg-gradient-to-r from-card via-board to-card px-4 py-3 shadow-card">
       {/* Left: back */}
@@ -37,7 +40,7 @@ export default function GameHeader({
             href="/"
             className="rounded-lg border border-[rgba(100,180,255,0.2)] bg-card/60 px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-dim transition-colors hover:border-gold/40 hover:text-gold"
           >
-            ← Lobby
+            {t("back.lobby")}
           </Link>
         )}
         {badges && <div className="flex min-w-0 flex-wrap items-center gap-2">{badges}</div>}
@@ -58,6 +61,7 @@ export default function GameHeader({
       {/* Right: controls */}
       <div className="flex items-center gap-2">
         {actions}
+        <LangToggle />
         {help && <HelpLink />}
       </div>
     </header>
