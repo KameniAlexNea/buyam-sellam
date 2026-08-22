@@ -43,17 +43,19 @@ export default function RoundRecapPanel({
     playerColor(Math.max(0, byBalance.findIndex((p) => p.username === name)));
 
   // The "story" of the round: real trades first (biggest money first), then a
-  // couple of dice rolls / skips / failures so the recap shows what happened.
+  // few skips. Dice rolls and failed attempts are noise — not shown.
   const highlights = useMemo(() => {
     const moves = (moveFeed ?? []).filter(
-      (m) => m.round === recap.round && m.action !== "plan"
+      (m) =>
+        m.round === recap.round &&
+        (m.action === "buy" || m.action === "sell" || m.action === "skip")
     );
     const trades = moves.filter((m) => m.action === "buy" || m.action === "sell");
-    const others = moves.filter((m) => m.action !== "buy" && m.action !== "sell");
+    const skips = moves.filter((m) => m.action === "skip");
     const sortedTrades = [...trades].sort(
       (a, b) => Math.abs(b.total ?? 0) - Math.abs(a.total ?? 0)
     );
-    return [...sortedTrades.slice(0, 4), ...others.slice(0, 2)];
+    return [...sortedTrades.slice(0, 6), ...skips.slice(0, 3)];
   }, [moveFeed, recap.round]);
 
   const highlightLabel = (m: MoveFeedEntry): string => {
@@ -72,16 +74,12 @@ export default function RoundRecapPanel({
           price: money(m.unit_price ?? 0),
           revenue: money(m.total ?? 0),
         });
-      case "roll":
-        return t("move.rolled", { dice: m.dice_total, price: money(m.dice_price ?? 0) });
-      case "skip":
-        return t("move.skipped", { reason: m.reason ?? t("move.noTrade") });
       default:
-        return t("move.failed", { reason: m.reason ?? t("move.condition") });
+        return t("move.skipped", { reason: m.reason ?? t("move.noTrade") });
     }
   };
   const highlightIcon = (a: string) =>
-    a === "buy" ? "🟢" : a === "sell" ? "🔴" : a === "roll" ? "🎲" : a === "skip" ? "⚪" : "⚠️";
+    a === "buy" ? "🟢" : a === "sell" ? "🔴" : "⚪";
 
   return (
     <div className="animate-fade-in-up w-full">
@@ -212,6 +210,13 @@ export default function RoundRecapPanel({
           })}
         </div>
         </div>
+      </div>
+
+      {/* Section separator */}
+      <div className="my-4 flex items-center gap-3" aria-hidden="true">
+        <span className="h-px flex-1 bg-gradient-to-r from-transparent via-gold/30 to-transparent" />
+        <span className="font-display text-[10px] font-bold tracking-[0.4em] text-gold/50">◆</span>
+        <span className="h-px flex-1 bg-gradient-to-r from-transparent via-gold/30 to-transparent" />
       </div>
 
       {/* Market news */}
