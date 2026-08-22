@@ -2,6 +2,7 @@
 
 import type { Results, Standing } from "@/lib/types";
 import { money, playerColor, productMeta, TONE_CLASSES } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 interface ResultsPanelProps {
   results: Results | null;
@@ -35,10 +36,11 @@ export default function ResultsPanel({
   onRematch,
   onNewGame,
 }: ResultsPanelProps) {
+  const { t } = useI18n();
   if (!results) {
     return (
       <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-8 text-center shadow-card">
-        <p className="text-dim">Fetching final results…</p>
+        <p className="text-dim">{t("res.fetching")}</p>
         {(onRematch || onNewGame) && <NavButtons onRematch={onRematch} onNewGame={onNewGame} />}
       </div>
     );
@@ -68,27 +70,27 @@ export default function ResultsPanel({
           👑
         </div>
         <span className="font-display text-[11px] font-bold uppercase tracking-[0.3em] text-gold">
-          🏆 Winner
+          {t("res.winner")}
         </span>
         <h2 className="mt-2 font-display text-4xl font-black uppercase tracking-wider text-shimmer">
           {results.winner}
         </h2>
         <p className="mt-2 text-sm text-dim">
-          Final balance{" "}
+          {t("res.finalBalance")}{" "}
           <span className="font-semibold text-buy">{money(winner.final_balance)}</span>{" "}
           ·{" "}
           <span className={winner.profit_loss >= 0 ? "text-buy" : "text-sell"}>
             {winner.profit_loss >= 0 ? "▲ +" : "▼ −"}
             {money(Math.abs(winner.profit_loss))}
           </span>{" "}
-          vs starting {money(results.starting_balance)}
+          {t("res.vsStarting", { amount: money(results.starting_balance) })}
         </p>
       </div>
 
       {/* Podium (top 3, with empty slot) */}
       <div className="mb-5 rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-5 shadow-card">
         <h3 className="mb-4 text-center font-display text-lg font-bold uppercase tracking-wide">
-          Podium
+          {t("res.podium")}
         </h3>
         <div className="flex items-end justify-center gap-3">
           {podiumOrder.map((s, i) => {
@@ -103,7 +105,7 @@ export default function ResultsPanel({
                   <div className="flex flex-col items-center">
                     <span className="text-2xl grayscale">{MEDALS[rank]}</span>
                     <p className="mt-1 w-full truncate text-center text-[11px] font-black uppercase tracking-wide text-dim">
-                      No player
+                      {t("res.noPlayer")}
                     </p>
                   </div>
                   <div className={`flex w-full flex-col items-center justify-end rounded-t-xl border border-dashed bg-board/30 px-1 pt-2 ${PODIUM_HEIGHT[rank]}`}>
@@ -129,13 +131,8 @@ export default function ResultsPanel({
                   <p
                     className={`mt-1 w-full truncate text-center text-[11px] font-black uppercase tracking-wide ${pc.text}`}
                   >
-                    {s.username === "You" ? "You" : s.username}
+                    {s.username}
                   </p>
-                  {humanPlayers?.includes(s.username) && s.username !== "You" && (
-                    <span className="mt-0.5 rounded-full bg-gold/15 px-1.5 py-0.5 text-[8px] font-bold uppercase text-gold border border-gold/30">
-                      You
-                    </span>
-                  )}
                 </div>
                 {/* Podium block */}
                 <div
@@ -164,21 +161,20 @@ export default function ResultsPanel({
         {/* Standings */}
         <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-4 shadow-card">
           <h3 className="mb-3 font-display text-base font-bold uppercase tracking-wide">
-            Final Standings
+            {t("res.standings")}
           </h3>
           <table className="w-full text-left text-[11px]">
             <thead>
               <tr className="border-b border-[rgba(100,180,255,0.12)] text-[9px] uppercase tracking-wider text-dim">
                 <th className="pb-1.5 pr-2">#</th>
-                <th className="pb-1.5 pr-2">Player</th>
-                <th className="pb-1.5 pr-2 text-right">Final balance</th>
-                <th className="pb-1.5 pr-2 text-right">Change</th>
-                <th className="pb-1.5 text-right">Wins</th>
+                <th className="pb-1.5 pr-2">{t("res.playerHead")}</th>
+                <th className="pb-1.5 pr-2 text-right">{t("res.finalHead")}</th>
+                <th className="pb-1.5 pr-2 text-right">{t("res.changeHead")}</th>
+                <th className="pb-1.5 text-right">{t("res.winsHead")}</th>
               </tr>
             </thead>
             <tbody>
               {standings.map((s) => {
-                const isHuman = humanPlayers?.includes(s.username) ?? false;
                 const pc = playerColor(Math.max(0, standings.findIndex((x) => x.username === s.username)));
                 const st = results.stats?.[s.username];
                 return (
@@ -192,26 +188,21 @@ export default function ResultsPanel({
                           {s.username.slice(0, 1).toUpperCase()}
                         </span>
                         <span className="truncate font-semibold text-bright">
-                          {s.username === "You" ? "You" : s.username}
+                          {s.username}
                         </span>
-                        {isHuman && s.username !== "You" && (
-                          <span className="rounded-full bg-gold/15 px-1.5 py-0.5 text-[8px] font-bold uppercase text-gold border border-gold/30">
-                            You
-                          </span>
-                        )}
                       </div>
                       <div className="mt-0.5 flex flex-wrap gap-1">
                         {s.spoiled && s.spoiled.length > 0 ? (
                           <>
                             <span className="text-[9px] font-bold uppercase tracking-wider text-dim/70">
-                              spoiled:
+                              {t("res.spoiled")}
                             </span>
                             {s.spoiled.map((it) => {
                               const meta = productMeta(it.product.name);
                               return (
                                 <span
                                   key={it.product.name}
-                                  title="Unsold stock spoiled at market close — worth nothing"
+                                  title={t("res.spoiledTitle")}
                                   className={`inline-flex items-center gap-1 rounded border px-1 py-0.5 text-[9px] line-through opacity-70 ${TONE_CLASSES[meta.tone]}`}
                                 >
                                   {meta.icon} {it.quantity}
@@ -220,7 +211,7 @@ export default function ResultsPanel({
                             })}
                           </>
                         ) : (
-                          <span className="text-[10px] italic text-dim">no inventory</span>
+                          <span className="text-[10px] italic text-dim">{t("res.noInventory")}</span>
                         )}
                       </div>
                     </td>
@@ -244,32 +235,32 @@ export default function ResultsPanel({
         {/* Game summary */}
         <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-4 shadow-card">
           <h3 className="mb-3 font-display text-base font-bold uppercase tracking-wide">
-            Game Summary
+            {t("res.summary")}
           </h3>
           <div className="flex flex-col gap-1.5 text-[11px]">
-            <SummaryRow label="Rounds played" value={`${results.rounds_played ?? standings.length} / ${results.total_rounds ?? "–"}`} />
-            <SummaryRow label="Starting balance" value={money(results.starting_balance)} />
-            <SummaryRow label="Final balance" value={money(focus.final_balance)} strong />
+            <SummaryRow label={t("res.roundsPlayed")} value={`${results.rounds_played ?? standings.length} / ${results.total_rounds ?? "–"}`} />
+            <SummaryRow label={t("res.startingBalance")} value={money(results.starting_balance)} />
+            <SummaryRow label={t("res.finalBalance")} value={money(focus.final_balance)} strong />
             <SummaryRow
-              label="Total change"
+              label={t("res.totalChange")}
               value={`${focus.profit_loss >= 0 ? "▲ +" : "▼ −"}${money(Math.abs(focus.profit_loss))}`}
               tone={focus.profit_loss >= 0 ? "text-buy" : "text-sell"}
             />
             <div className="my-1 border-t border-[rgba(100,180,255,0.1)]" />
             <SummaryRow
-              label="Best round"
-              value={focusStats?.best_round != null ? `Round ${focusStats.best_round} · ▲ +${money(focusStats.best_gain)}` : "—"}
+              label={t("res.bestRound")}
+              value={focusStats?.best_round != null ? `${t("res.round", { round: focusStats.best_round })} · ▲ +${money(focusStats.best_gain)}` : "—"}
               tone="text-buy"
             />
             <SummaryRow
-              label="Worst round"
-              value={focusStats?.worst_round != null ? `Round ${focusStats.worst_round} · ▼ −${money(Math.abs(focusStats.worst_loss))}` : "—"}
+              label={t("res.worstRound")}
+              value={focusStats?.worst_round != null ? `${t("res.round", { round: focusStats.worst_round })} · ▼ −${money(Math.abs(focusStats.worst_loss))}` : "—"}
               tone="text-sell"
             />
             <div className="my-1 border-t border-[rgba(100,180,255,0.1)]" />
             <div className="grid grid-cols-2 gap-2 pt-1">
               <div className="rounded-lg bg-board/50 p-2 text-center">
-                <p className="text-[9px] uppercase tracking-wider text-dim">Win rate</p>
+                <p className="text-[9px] uppercase tracking-wider text-dim">{t("res.winRate")}</p>
                 <p className="font-display text-lg font-black text-gold">
                   {focusStats ? `${Math.round(focusStats.win_rate * 100)}%` : "—"}
                 </p>
@@ -278,17 +269,17 @@ export default function ResultsPanel({
                 </p>
               </div>
               <div className="rounded-lg bg-board/50 p-2 text-center">
-                <p className="text-[9px] uppercase tracking-wider text-dim">Biggest gain</p>
+                <p className="text-[9px] uppercase tracking-wider text-dim">{t("res.biggestGain")}</p>
                 <p className="font-display text-lg font-black text-buy">
                   {focusStats ? `+${money(focusStats.best_gain)}` : "—"}
                 </p>
                 <p className="text-[9px] text-dim">
-                  {focusStats?.best_round != null ? `round ${focusStats.best_round}` : ""}
+                  {focusStats?.best_round != null ? t("res.round", { round: focusStats.best_round }) : ""}
                 </p>
               </div>
             </div>
             <p className="mt-2 rounded-lg border border-[rgba(100,180,255,0.08)] bg-board/40 px-2 py-1.5 text-center text-[9px] text-dim">
-              🥀 Unsold stock spoils at market close — only cash counts.
+              {t("res.spoilNote")}
             </p>
           </div>
         </div>
@@ -327,6 +318,7 @@ function NavButtons({
   onRematch?: () => void;
   onNewGame?: () => void;
 }) {
+  const { t } = useI18n();
   if (!onRematch && !onNewGame) return null;
   return (
     <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
@@ -336,7 +328,7 @@ function NavButtons({
           onClick={onRematch}
           className="rounded-xl bg-gold px-6 py-2.5 font-display text-sm font-bold uppercase tracking-widest text-deep shadow-glow-gold transition-all hover:brightness-110 active:scale-95"
         >
-          ♻️ Rematch
+          {t("res.rematch")}
         </button>
       )}
       {onNewGame && (
@@ -345,7 +337,7 @@ function NavButtons({
           onClick={onNewGame}
           className="rounded-xl border border-[rgba(100,180,255,0.25)] bg-card/60 px-6 py-2.5 font-display text-sm font-bold uppercase tracking-widest text-bright transition-all hover:border-gold/40 hover:text-gold active:scale-95"
         >
-          🏠 New Game
+          {t("res.newGame")}
         </button>
       )}
     </div>

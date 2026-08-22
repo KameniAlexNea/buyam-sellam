@@ -1,6 +1,7 @@
 "use client";
 
 import type { NewsItem } from "@/lib/types";
+import { useI18n } from "@/lib/i18n";
 
 interface NewsTickerProps {
   items: NewsItem[];
@@ -11,11 +12,12 @@ interface NewsTickerProps {
  * phases. Rotates through the round's headlines (price moves, calm markets).
  */
 export default function NewsTicker({ items }: NewsTickerProps) {
+  const { t } = useI18n();
   if (!items || items.length === 0) return null;
   return (
     <div className="flex items-center gap-2 overflow-hidden rounded-xl border border-[rgba(100,180,255,0.1)] bg-board/50 px-3 py-1.5">
       <span className="shrink-0 font-display text-[10px] font-bold uppercase tracking-widest text-gold">
-        📰 Market
+        {t("news.market")}
       </span>
       <div className="flex min-w-0 items-center gap-4">
         {items.map((n, i) => (

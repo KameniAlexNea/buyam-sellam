@@ -101,6 +101,8 @@ export interface RoundRecapPlayer {
   balance: number;
   change: number;
   role: string;
+  rank: number;
+  prev_rank: number | null;
 }
 
 export interface RoundRecap {
