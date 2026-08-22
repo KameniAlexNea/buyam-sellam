@@ -149,6 +149,9 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     "recap.marketNews": "📰 Market news",
     "recap.seeResults": "🏆 See Final Results",
     "recap.startNext": "▶ Start Round {round}",
+    "recap.highlights": "🔥 Round highlights",
+    "recap.noHighlights": "No notable trades — a quiet round.",
+    "recap.positions": "Standings",
 
     // Results
     "res.fetching": "Fetching final results…",
@@ -341,6 +344,9 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     "recap.marketNews": "📰 Nouvelles du marché",
     "recap.seeResults": "🏆 Voir les résultats finaux",
     "recap.startNext": "▶ Lancer le tour {round}",
+    "recap.highlights": "🔥 Temps forts du tour",
+    "recap.noHighlights": "Aucun échange notable — un tour calme.",
+    "recap.positions": "Classement",
 
     // Results
     "res.fetching": "Chargement des résultats finaux…",

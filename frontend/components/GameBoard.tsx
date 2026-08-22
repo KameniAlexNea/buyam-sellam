@@ -301,6 +301,7 @@ export default function GameBoard({ gameId }: { gameId: string }) {
             <RoundRecapPanel
               recap={game.round_recap}
               humanPlayers={humanPlayers}
+              moveFeed={game.move_feed}
               busy={busy}
               onNext={nextRound}
             />

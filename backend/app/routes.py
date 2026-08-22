@@ -1170,6 +1170,16 @@ def _end_current_round(game_id: str):
     round_history = meta.get("round_history", [])
     prev_balances = round_history[-1]["balances"] if round_history else None
     starting = meta.get("starting_balance", 0)
+
+    # Rank movement: where each player stood at the END of the previous round
+    # (None on round 1). Lets the recap show "▲ moved up / ▼ fell".
+    def _rank_map(balances):
+        order = sorted(balances, key=lambda u: balances[u], reverse=True)
+        return {u: i + 1 for i, u in enumerate(order)}
+
+    prev_rank_map = _rank_map(prev_balances) if prev_balances else None
+    cur_rank_map = _rank_map({p.username: p.balance for p in table.players})
+
     players_recap = []
     for p in table.players:
         prev = (prev_balances or {}).get(p.username, starting)
@@ -1179,6 +1189,8 @@ def _end_current_round(game_id: str):
                 "balance": p.balance,
                 "change": round(p.balance - prev, 2),
                 "role": meta.get("player_roles", {}).get(p.username, {}).get("role", "human"),
+                "rank": cur_rank_map[p.username],
+                "prev_rank": prev_rank_map.get(p.username) if prev_rank_map else None,
             }
         )
 
