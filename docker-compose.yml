@@ -38,10 +38,12 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
       args:
-        # Inlined into the client bundle at build time. Because the browser
-        # reaches the API through the host-published port, localhost:50180 works
-        # for local Compose deployments.
-        NEXT_PUBLIC_API_URL: http://localhost:50180
+        # Inlined into the client bundle at build time. The public site is
+        # served at this origin by nginx, which proxies the API paths
+        # (/games*, /health, /strategies, /difficulties) to the backend.
+        # For a local-only deployment, override this with
+        # NEXT_PUBLIC_API_URL=http://localhost:50180.
+        NEXT_PUBLIC_API_URL: https://buyam-sellam.alexneakameni.cloud
     image: buyam-sellam-frontend
     container_name: buyam-sellam-frontend
     ports:
