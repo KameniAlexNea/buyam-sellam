@@ -1,28 +1,18 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { cookies } from "next/headers";
 import HelpContent from "@/components/HelpContent";
-import GameHeader from "@/components/GameHeader";
 
-export const metadata: Metadata = {
-  title: "How to Play — Buyam-Sellam",
-  description: "A structured guide to the Buyam-Sellam marketplace trading game.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const cookieStore = await cookies();
+  const fr = cookieStore.get("buyam.locale")?.value === "fr";
+  return {
+    title: fr ? "Comment jouer — Buyam-Sellam" : "How to Play — Buyam-Sellam",
+    description: fr
+      ? "Un guide structuré du jeu de trading de marché Buyam-Sellam."
+      : "A structured guide to the Buyam-Sellam marketplace trading game.",
+  };
+}
 
 export default function HelpPage() {
-  return (
-    <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6">
-      <GameHeader subtitle="How to play" help={false} />
-
-      <HelpContent />
-
-      <footer className="flex justify-center pb-6">
-        <Link
-          href="/"
-          className="rounded-xl bg-gold px-8 py-3 font-display text-sm font-black uppercase tracking-widest text-deep shadow-glow-gold transition-all hover:brightness-110 active:scale-95"
-        >
-          🎲 Back to the game
-        </Link>
-      </footer>
-    </div>
-  );
+  return <HelpContent />;
 }

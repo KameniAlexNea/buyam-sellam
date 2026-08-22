@@ -1,5 +1,39 @@
 "use client";
 
+import { Fragment } from "react";
+import Link from "next/link";
+import { useI18n } from "@/lib/i18n";
+import GameHeader from "./GameHeader";
+
+const COLOR_CLS: Record<string, string> = {
+  buy: "text-buy",
+  sell: "text-sell",
+  gold: "text-gold",
+  cyan: "text-cyan",
+  dim: "text-dim",
+  amber: "text-amberc",
+  bright: "text-bright",
+  b: "text-bright",
+};
+
+/** Renders [color:text] inline segments as colored bold text. */
+function Rich({ text }: { text: string }) {
+  const parts = text.split(/(\[(?:buy|sell|gold|cyan|dim|amber|bright|b):[^\]]*\])/g);
+  return (
+    <>
+      {parts.map((p, i) => {
+        const m = /^\[(buy|sell|gold|cyan|dim|amber|bright|b):(.*)\]$/.exec(p);
+        if (!m) return <Fragment key={i}>{p}</Fragment>;
+        return (
+          <b key={i} className={COLOR_CLS[m[1]]}>
+            {m[2]}
+          </b>
+        );
+      })}
+    </>
+  );
+}
+
 function Section({
   icon,
   title,
@@ -31,168 +65,156 @@ function Bullet({ children }: { children: React.ReactNode }) {
 }
 
 export default function HelpContent() {
+  const { t } = useI18n();
   return (
-    <div className="space-y-4">
-      <Section icon="🎯" title="Goal">
-        <p>
-          Finish the game with the <b className="text-bright">highest balance</b> to win.
-          Each round you roll the dice, read the markets, and trade —{" "}
-          <b className="text-buy">buy low</b>, <b className="text-sell">sell high</b>, and
-          don't forget the taxes and entry fees.
-        </p>
-      </Section>
+    <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6">
+      <GameHeader subtitle={t("help.subtitle")} help={false} />
 
-      <Section icon="🎲" title="Dice & prices">
-        <p>
-          You roll two dice (2d6, total 2–12) every round. Your{" "}
-          <b className="text-cyan">dice price</b> is the total × 100 FCFA, and it decides
-          what you can do at each market:
-        </p>
-        <ul className="space-y-1.5">
-          <Bullet>
-            High roll → higher dice price → good for <b className="text-sell">selling</b>{" "}
-            (the market pays more).
-          </Bullet>
-          <Bullet>
-            Low roll → lower dice price → good for <b className="text-buy">buying</b>{" "}
-            (you pay less).
-          </Bullet>
-        </ul>
-      </Section>
+      <div className="space-y-4">
+        <Section icon="🎯" title={t("help.goal.title")}>
+          <p>
+            <Rich text={t("help.goal.body")} />
+          </p>
+        </Section>
 
-      <Section icon="🌐" title="Markets">
-        <p>
-          Each round a few markets are active on the board's edges. Every market trades{" "}
-          <b className="text-bright">one product</b> at a <b className="text-cyan">fixed price</b>,
-          with a supply, a <b className="text-amberc">tax rate</b> and a{" "}
-          <b className="text-sell">sell entry fee</b>.
-        </p>
-        <ul className="space-y-1.5">
-          <Bullet>Products: 🍚 Cooked Rice · 🥘 Fufu · 🌽 Corn Flour · 🥜 Peanut Butter · 🐟 Smoked Fish</Bullet>
-          <Bullet>
-            Tax is added on buys and taken from sells — a 10% tax on a 1,000 FCFA sale costs you 100 FCFA.
-          </Bullet>
-          <Bullet>
-            Selling in a market costs a fixed entry fee, paid no matter what happens.
-          </Bullet>
-        </ul>
-      </Section>
+        <Section icon="🎲" title={t("help.dice.title")}>
+          <p>
+            <Rich text={t("help.dice.body")} />
+          </p>
+          <ul className="space-y-1.5">
+            <Bullet>
+              <Rich text={t("help.dice.high")} />
+            </Bullet>
+            <Bullet>
+              <Rich text={t("help.dice.low")} />
+            </Bullet>
+          </ul>
+        </Section>
 
-      <Section icon="🧠" title="Strategy phase — plan your moves">
-        <p>
-          Each player, in turn, picks an action for every active market:
-        </p>
-        <ul className="space-y-1.5">
-          <Bullet>
-            <b className="text-buy">⬇ Buy</b> — plan to buy that product.
-          </Bullet>
-          <Bullet>
-            <b className="text-sell">⬆ Sell</b> — plan to sell it (only possible if you own some).
-          </Bullet>
-          <Bullet>
-            <b className="text-dim">— Skip</b> — do nothing there.
-          </Bullet>
-        </ul>
-        <p>
-          On the board, <b className="text-bright">tap a market space</b> to cycle
-          Skip → Buy → Sell, or use the buttons in the centre. Bots finalize their own plans
-          automatically.
-        </p>
-      </Section>
+        <Section icon="🌐" title={t("help.markets.title")}>
+          <p>
+            <Rich text={t("help.markets.body")} />
+          </p>
+          <ul className="space-y-1.5">
+            <Bullet>
+              <Rich text={t("help.markets.products")} />
+            </Bullet>
+            <Bullet>
+              <Rich text={t("help.markets.tax")} />
+            </Bullet>
+            <Bullet>
+              <Rich text={t("help.markets.fee")} />
+            </Bullet>
+          </ul>
+        </Section>
 
-      <Section icon="⚡" title="Action phase — trades resolve">
-        <p>
-          Players act in <b className="text-bright">dice-roll turn order</b> (highest first).
-          When it's your turn, the board's centre shows your dice and a prompt:
-        </p>
-        <ul className="space-y-1.5">
-          <Bullet>
-            <b className="text-buy">Buy</b>: if your dice price ≥ the market price, you buy at the
-            market price — cheapest sell orders first, then market supply. Quantity is limited by
-            your dice roll, the stock, and your balance.
-          </Bullet>
-          <Bullet>
-            <b className="text-sell">Sell</b>: if your dice price ≤ the market price, the market
-            buys your stock at <b className="text-cyan">your</b> dice price (minus tax), after the
-            entry fee.
-          </Bullet>
-          <Bullet>If the condition isn't met, the action is skipped automatically.</Bullet>
-        </ul>
-      </Section>
+        <Section icon="🧠" title={t("help.strategy.title")}>
+          <p>
+            <Rich text={t("help.strategy.body")} />
+          </p>
+          <ul className="space-y-1.5">
+            <Bullet>
+              <Rich text={t("help.strategy.buy")} />
+            </Bullet>
+            <Bullet>
+              <Rich text={t("help.strategy.sell")} />
+            </Bullet>
+            <Bullet>
+              <Rich text={t("help.strategy.skip")} />
+            </Bullet>
+          </ul>
+          <p>
+            <Rich text={t("help.strategy.board")} />
+          </p>
+        </Section>
 
-      <Section icon="👥" title="Multi-player (hot-seat)">
-        <p>
-          Several humans can sit at the same table and share the screen. The{" "}
-          <b className="text-gold">turn ribbon</b> above the board always shows whose turn it is:
-          who has planned (✓), who's planning now (◌), and the action turn order with dice.
-          AI bots fill the remaining seats and play on their own.
-        </p>
-      </Section>
+        <Section icon="⚡" title={t("help.action.title")}>
+          <p>
+            <Rich text={t("help.action.body")} />
+          </p>
+          <ul className="space-y-1.5">
+            <Bullet>
+              <Rich text={t("help.action.buy")} />
+            </Bullet>
+            <Bullet>
+              <Rich text={t("help.action.sell")} />
+            </Bullet>
+            <Bullet>
+              <Rich text={t("help.action.condition")} />
+            </Bullet>
+          </ul>
+        </Section>
 
-      <Section icon="🤖" title="Bot strategies">
-        <p className="mb-2">
-          Which strategies can sit at the table depends on the <b className="text-gold">difficulty</b>:
-          Easy gets a fixed roster of weak bots (you only pick the count),
-          Medium the classic heuristics, Hard only the probability-aware traders.
-          The number of opponents is tied to the level too — Easy seats 0–4,
-          Medium 4–8, Hard 6–10 (more traders drain market supply, so bigger
-          tables are harder). With two or more humans the limit is lifted.
-        </p>
-        <ul className="space-y-1.5">
-          <Bullet>
-            <b className="text-bright">Random</b> — picks at random (baseline).
-          </Bullet>
-          <Bullet>
-            <b className="text-bright">ConservativeTrader</b> — only trades on very favorable conditions.
-          </Bullet>
-          <Bullet>
-            <b className="text-bright">BuyLowSellHigh</b> — hunts profit margins (classic arbitrage).
-          </Bullet>
-          <Bullet>
-            <b className="text-bright">AggressiveBuyer</b> — buys everything, hoards stock.
-          </Bullet>
-          <Bullet>
-            <b className="text-bright">MarketSniper</b> — targets high-supply, low-price markets.
-          </Bullet>
-          <Bullet>
-            <b className="text-bright">ExpectedValue</b> — buys/sells using the real 2d6 odds and expected value.
-          </Bullet>
-          <Bullet>
-            <b className="text-bright">Arbitrageur</b> — buys the cheap market, sells the expensive one for the same product.
-          </Bullet>
-          <Bullet>
-            <b className="text-bright">Endgame</b> — EV trading that liquidates before spoilage and adjusts risk by its chances of winning.
-          </Bullet>
-        </ul>
-      </Section>
+        <Section icon="👥" title={t("help.multi.title")}>
+          <p>
+            <Rich text={t("help.multi.body")} />
+          </p>
+        </Section>
 
-      <Section icon="🗺️" title="Reading the board">
-        <ul className="space-y-1.5">
-          <Bullet>
-            <b className="text-bright">Corners</b> = each player's home base (token + balance).
-          </Bullet>
-          <Bullet>
-            <b className="text-bright">Edges</b> = the active market spaces (icon, name, price).
-          </Bullet>
-          <Bullet>
-            <b className="text-bright">Centre</b> = the dice, the message, and the controls.
-          </Bullet>
-          <Bullet>
-            The active player gets a <b className="text-gold">PLANNING / TRADING</b> badge on their
-            corner, and their token moves onto the market they're trading at.
-          </Bullet>
-        </ul>
-      </Section>
+        <Section icon="🤖" title={t("help.bots.title")}>
+          <p className="mb-2">
+            <Rich text={t("help.bots.body")} />
+          </p>
+          <ul className="space-y-1.5">
+            <Bullet>
+              <Rich text={t("help.bots.random")} />
+            </Bullet>
+            <Bullet>
+              <Rich text={t("help.bots.conservative")} />
+            </Bullet>
+            <Bullet>
+              <Rich text={t("help.bots.blsh")} />
+            </Bullet>
+            <Bullet>
+              <Rich text={t("help.bots.aggressive")} />
+            </Bullet>
+            <Bullet>
+              <Rich text={t("help.bots.sniper")} />
+            </Bullet>
+            <Bullet>
+              <Rich text={t("help.bots.ev")} />
+            </Bullet>
+            <Bullet>
+              <Rich text={t("help.bots.arb")} />
+            </Bullet>
+            <Bullet>
+              <Rich text={t("help.bots.endgame")} />
+            </Bullet>
+          </ul>
+        </Section>
 
-      <Section icon="💾" title="Save & resume">
-        <p>
-          Your game is saved in your browser. If you leave and come back, the lobby offers{" "}
-          <b className="text-bright">▶ Continue</b> for a running game (or{" "}
-          <b className="text-bright">View results</b> after it ends). When it's over you can{" "}
-          <b className="text-bright">♻️ Rematch</b> with the same table or start a{" "}
-          <b className="text-bright">🏠 New Game</b>.
-        </p>
-      </Section>
+        <Section icon="🗺️" title={t("help.board.title")}>
+          <ul className="space-y-1.5">
+            <Bullet>
+              <Rich text={t("help.board.corners")} />
+            </Bullet>
+            <Bullet>
+              <Rich text={t("help.board.edges")} />
+            </Bullet>
+            <Bullet>
+              <Rich text={t("help.board.centre")} />
+            </Bullet>
+            <Bullet>
+              <Rich text={t("help.board.badge")} />
+            </Bullet>
+          </ul>
+        </Section>
+
+        <Section icon="💾" title={t("help.save.title")}>
+          <p>
+            <Rich text={t("help.save.body")} />
+          </p>
+        </Section>
+      </div>
+
+      <footer className="flex justify-center pb-6">
+        <Link
+          href="/"
+          className="rounded-xl bg-gold px-8 py-3 font-display text-sm font-black uppercase tracking-widest text-deep shadow-glow-gold transition-all hover:brightness-110 active:scale-95"
+        >
+          {t("help.back")}
+        </Link>
+      </footer>
     </div>
   );
 }
