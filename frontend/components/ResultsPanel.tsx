@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Results, Standing } from "@/lib/types";
 import { money, playerColor, productMeta, TONE_CLASSES } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
@@ -37,6 +38,8 @@ export default function ResultsPanel({
   onNewGame,
 }: ResultsPanelProps) {
   const { t } = useI18n();
+  // Whether the "Résumé de la partie" performance modal is open.
+  const [showSummary, setShowSummary] = useState(false);
   if (!results) {
     return (
       <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-8 text-center shadow-card">
@@ -156,13 +159,31 @@ export default function ResultsPanel({
         </div>
       </div>
 
-      {/* Standings table + game summary */}
-      <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Standings */}
-        <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-4 shadow-card">
-          <h3 className="mb-3 font-display text-base font-bold uppercase tracking-wide">
-            {t("res.standings")}
-          </h3>
+      {/* Your recap — click to open the performance modal */}
+      <div className="mb-5">
+        <button
+          type="button"
+          onClick={() => setShowSummary(true)}
+          className="flex w-full items-center justify-between gap-3 rounded-2xl border border-gold/30 bg-gradient-to-r from-card via-board to-card px-5 py-4 text-left shadow-glow-gold transition-all hover:brightness-110 active:scale-[0.99]"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📊</span>
+            <div>
+              <p className="font-display text-sm font-bold uppercase tracking-widest text-gold">
+                {t("res.summary")}
+              </p>
+              <p className="text-xs text-dim">{focus.username}</p>
+            </div>
+          </div>
+          <span className="text-xl text-dim">▸</span>
+        </button>
+      </div>
+
+      {/* Classement final — the most important, full width */}
+      <div className="mb-5 rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-4 shadow-card">
+        <h3 className="mb-3 font-display text-base font-bold uppercase tracking-wide">
+          {t("res.standings")}
+        </h3>
           <table className="w-full text-left text-[11px]">
             <thead>
               <tr className="border-b border-[rgba(100,180,255,0.12)] text-[9px] uppercase tracking-wider text-dim">
@@ -232,60 +253,103 @@ export default function ResultsPanel({
           </table>
         </div>
 
-        {/* Game summary */}
-        <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-4 shadow-card">
-          <h3 className="mb-3 font-display text-base font-bold uppercase tracking-wide">
-            {t("res.summary")}
-          </h3>
-          <div className="flex flex-col gap-1.5 text-[11px]">
-            <SummaryRow label={t("res.roundsPlayed")} value={`${results.rounds_played ?? standings.length} / ${results.total_rounds ?? "–"}`} />
-            <SummaryRow label={t("res.startingBalance")} value={money(results.starting_balance)} />
-            <SummaryRow label={t("res.finalBalance")} value={money(focus.final_balance)} strong />
-            <SummaryRow
-              label={t("res.totalChange")}
-              value={`${focus.profit_loss >= 0 ? "▲ +" : "▼ −"}${money(Math.abs(focus.profit_loss))}`}
-              tone={focus.profit_loss >= 0 ? "text-buy" : "text-sell"}
-            />
-            <div className="my-1 border-t border-[rgba(100,180,255,0.1)]" />
-            <SummaryRow
-              label={t("res.bestRound")}
-              value={focusStats?.best_round != null ? `${t("res.round", { round: focusStats.best_round })} · ▲ +${money(focusStats.best_gain)}` : "—"}
-              tone="text-buy"
-            />
-            <SummaryRow
-              label={t("res.worstRound")}
-              value={focusStats?.worst_round != null ? `${t("res.round", { round: focusStats.worst_round })} · ▼ −${money(Math.abs(focusStats.worst_loss))}` : "—"}
-              tone="text-sell"
-            />
-            <div className="my-1 border-t border-[rgba(100,180,255,0.1)]" />
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <div className="rounded-lg bg-board/50 p-2 text-center">
-                <p className="text-[9px] uppercase tracking-wider text-dim">{t("res.winRate")}</p>
-                <p className="font-display text-lg font-black text-gold">
-                  {focusStats ? `${Math.round(focusStats.win_rate * 100)}%` : "—"}
-                </p>
-                <p className="text-[9px] text-dim">
-                  {focusStats ? `${focusStats.wins} / ${focusStats.rounds_played}` : ""}
-                </p>
-              </div>
-              <div className="rounded-lg bg-board/50 p-2 text-center">
-                <p className="text-[9px] uppercase tracking-wider text-dim">{t("res.biggestGain")}</p>
-                <p className="font-display text-lg font-black text-buy">
-                  {focusStats ? `+${money(focusStats.best_gain)}` : "—"}
-                </p>
-                <p className="text-[9px] text-dim">
-                  {focusStats?.best_round != null ? t("res.round", { round: focusStats.best_round }) : ""}
-                </p>
-              </div>
-            </div>
-            <p className="mt-2 rounded-lg border border-[rgba(100,180,255,0.08)] bg-board/40 px-2 py-1.5 text-center text-[9px] text-dim">
-              {t("res.spoilNote")}
-            </p>
-          </div>
-        </div>
-      </div>
 
       <NavButtons onRematch={onRematch} onNewGame={onNewGame} />
+
+      {/* Performance modal — opened by the "Résumé de la partie" button */}
+      {showSummary && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div
+            className="animate-fade-in-up max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-gold/25 bg-card p-5 shadow-glow-gold"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-display text-lg font-bold uppercase tracking-wide text-gold">
+                  {t("res.summary")}
+                </h3>
+                <p className="mt-0.5 text-xs text-dim">
+                  {t("res.summaryFor", { name: focus.username })}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSummary(false)}
+                aria-label={t("res.close")}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[rgba(100,180,255,0.2)] text-dim transition-colors hover:text-gold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-1.5 text-[12px]">
+              <SummaryRow
+                label={t("res.roundsPlayed")}
+                value={`${results.rounds_played ?? standings.length} / ${results.total_rounds ?? "–"}`}
+              />
+              <SummaryRow label={t("res.startingBalance")} value={money(results.starting_balance)} />
+              <SummaryRow label={t("res.finalBalance")} value={money(focus.final_balance)} strong />
+              <SummaryRow
+                label={t("res.totalChange")}
+                value={`${focus.profit_loss >= 0 ? "▲ +" : "▼ −"}${money(Math.abs(focus.profit_loss))}`}
+                tone={focus.profit_loss >= 0 ? "text-buy" : "text-sell"}
+              />
+              <div className="my-1 border-t border-[rgba(100,180,255,0.1)]" />
+              <SummaryRow
+                label={t("res.bestRound")}
+                value={
+                  focusStats?.best_round != null
+                    ? `${t("res.round", { round: focusStats.best_round })} · ▲ +${money(focusStats.best_gain)}`
+                    : "—"
+                }
+                tone="text-buy"
+              />
+              <SummaryRow
+                label={t("res.worstRound")}
+                value={
+                  focusStats?.worst_round != null
+                    ? `${t("res.round", { round: focusStats.worst_round })} · ▼ −${money(Math.abs(focusStats.worst_loss))}`
+                    : "—"
+                }
+                tone="text-sell"
+              />
+              <div className="my-1 border-t border-[rgba(100,180,255,0.1)]" />
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="rounded-lg bg-board/50 p-2 text-center">
+                  <p className="text-[9px] uppercase tracking-wider text-dim">{t("res.winRate")}</p>
+                  <p className="font-display text-lg font-black text-gold">
+                    {focusStats ? `${Math.round(focusStats.win_rate * 100)}%` : "—"}
+                  </p>
+                  <p className="text-[9px] text-dim">
+                    {focusStats ? `${focusStats.wins} / ${focusStats.rounds_played}` : ""}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-board/50 p-2 text-center">
+                  <p className="text-[9px] uppercase tracking-wider text-dim">{t("res.biggestGain")}</p>
+                  <p className="font-display text-lg font-black text-buy">
+                    {focusStats ? `+${money(focusStats.best_gain)}` : "—"}
+                  </p>
+                  <p className="text-[9px] text-dim">
+                    {focusStats?.best_round != null ? t("res.round", { round: focusStats.best_round }) : ""}
+                  </p>
+                </div>
+              </div>
+              <p className="mt-2 rounded-lg border border-[rgba(100,180,255,0.08)] bg-board/40 px-2 py-1.5 text-center text-[9px] text-dim">
+                {t("res.spoilNote")}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowSummary(false)}
+              className="mt-4 w-full rounded-xl bg-gold py-2.5 font-display text-sm font-black uppercase tracking-widest text-deep shadow-glow-gold transition-all hover:brightness-110 active:scale-[0.99]"
+            >
+              {t("res.close")}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

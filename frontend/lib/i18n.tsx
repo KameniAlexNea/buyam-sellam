@@ -181,6 +181,8 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     "res.round": "Round {round}",
     "res.rematch": "♻️ Rematch",
     "res.newGame": "🏠 New Game",
+    "res.close": "Close",
+    "res.summaryFor": "Performance of {name}",
 
     // News ticker
     "news.market": "📰 Market",
@@ -447,6 +449,8 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     "res.round": "Tour {round}",
     "res.rematch": "♻️ Revanche",
     "res.newGame": "🏠 Nouvelle partie",
+    "res.close": "Fermer",
+    "res.summaryFor": "Performance de {name}",
 
     // News ticker
     "news.market": "📰 Marché",
