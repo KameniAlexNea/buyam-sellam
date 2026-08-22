@@ -417,19 +417,40 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
-export function I18nProvider({ children }: { children: ReactNode }) {
+export function I18nProvider({
+  children,
+  initialLocale = "en",
+}: {
+  children: ReactNode;
+  initialLocale?: Locale;
+}) {
   // Persist the chosen language so it survives reloads/navigations.
-  const [locale, setLocale] = useState<Locale>(() => {
-    if (typeof window === "undefined") return "en";
-    const saved = window.localStorage.getItem("buyam.locale");
-    return saved === "en" || saved === "fr" ? saved : "en";
-  });
+  // The initial locale comes from the server (cookie) so the server-rendered
+  // HTML matches the first client render. Reading localStorage in the state
+  // initializer would break SSR hydration whenever the saved locale differs
+  // from the server's default (server renders "en", client hydrates "fr").
+  const [locale, setLocale] = useState<Locale>(initialLocale);
+
+  // After hydration, adopt the language persisted in localStorage. This covers
+  // users who picked a language before the cookie mechanism existed (the
+  // cookie is missing on their first visit). No-op when already in sync.
+  useEffect(() => {
+    let saved: string | null = null;
+    try {
+      saved = window.localStorage.getItem("buyam.locale");
+    } catch {
+      /* storage unavailable */
+    }
+    if (saved === "en" || saved === "fr") setLocale(saved);
+  }, []);
 
   // Keep the document's lang attribute in sync so screen readers and the
-  // browser see the active language too.
+  // browser see the active language too, and mirror the choice into a cookie
+  // so the server renders the right language on the next request.
   useEffect(() => {
     window.localStorage.setItem("buyam.locale", locale);
     document.documentElement.lang = locale;
+    document.cookie = `buyam.locale=${locale}; path=/; max-age=31536000; samesite=lax`;
   }, [locale]);
 
   const t = useCallback(
