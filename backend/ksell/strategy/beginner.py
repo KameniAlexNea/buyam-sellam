@@ -46,16 +46,24 @@ class RandomStrategy(Strategy):
 class ConservativeTrader(Strategy):
     """Only trades when conditions are very favorable.
 
-    - Buys only when market price is in the bottom quartile (very cheap).
-    - Sells only when there's a clear profit (>25% margin).
-    - Skips most markets to preserve capital.
+    The "favorable" tests are defined against the free starter-stock reality:
+      - Buys only the cheap end of this round's markets (bottom 40%), and is
+        allowed to average into a small position it already holds — otherwise,
+        because starter stock covers most products, it would never buy.
+      - Sells bought stock only with a real 25%+ margin over cost; sells FREE
+        (starter) stock only into a clearly expensive market (top 40%).
+      - Keeps positions small and skips most markets to preserve capital.
     """
 
     label = "ConservativeTrader"
     description = "Trade only on very favorable conditions; preserve capital"
 
-    BUY_THRESHOLD = 0.4  # Buy only if price is in bottom 40% of round prices
-    SELL_MARGIN = 0.25  # Sell only with 25%+ margin
+    BUY_THRESHOLD = 0.4  # buy only if price is in the bottom 40% of round prices
+    SELL_MARGIN = 0.25  # sell bought stock only with 25%+ margin over cost
+    SELL_RANK = 0.6  # sell free stock only into the top 40% markets
+    MIN_EXIT_BUFFER = 0.10  # a buy needs an exit ≥10% above the entry price
+    MAX_POSITION = 30  # don't hoard more than this many units of one product
+    BUY_RESERVE = 10  # keep at least 10x the unit price in cash
 
     def choose_strategy(
         self,
@@ -72,7 +80,7 @@ class ConservativeTrader(Strategy):
         owned = self._owned_products(player)
         balance = player.get("balance", 0)
 
-        # Compute price statistics for this round
+        # Price statistics for this round → cheap/expensive rank per market.
         prices = [m["market_fixed_price"] for m in markets]
         if not prices:
             return [(m["market_index"], "skip") for m in markets]
@@ -81,27 +89,54 @@ class ConservativeTrader(Strategy):
         max_price = max(prices)
         price_range = max_price - min_price if max_price > min_price else 1
 
-        strategy: List[Tuple[int, str]] = []
+        # Highest-priced market for each product THIS round → is there an exit?
+        best_exit_price: Dict[str, float] = {}
+        for m in markets:
+            prod = m["product"]
+            best_exit_price[prod] = max(
+                best_exit_price.get(prod, 0.0), m["market_fixed_price"]
+            )
 
+        strategy: List[Tuple[int, str]] = []
         for m in markets:
             product = m["product"]
             price = m["market_fixed_price"]
             # Normalized price position (0.0 = cheapest, 1.0 = most expensive)
             norm = (price - min_price) / price_range
 
-            if product in owned:
-                avg_cost = owned[product]["avg_cost"]
-                margin = (price - avg_cost) / avg_cost if avg_cost > 0 else 0
-                if margin >= self.SELL_MARGIN:
-                    strategy.append((m["market_index"], "sell"))
+            item = owned.get(product)
+            position = item["quantity"] if item else 0
+            avg_cost = item["avg_cost"] if item else 0.0
+
+            # Favorable sell?
+            if item is not None:
+                if avg_cost > 0:
+                    margin = (price - avg_cost) / avg_cost
+                    favorable_sell = margin >= self.SELL_MARGIN
                 else:
-                    strategy.append((m["market_index"], "skip"))
+                    # Free starter stock: any price is profit, but stay picky —
+                    # only take it to a clearly expensive market.
+                    favorable_sell = norm >= self.SELL_RANK
             else:
-                # Only buy if price is very low relative to other markets
-                if norm <= self.BUY_THRESHOLD and balance > price * 10:
-                    strategy.append((m["market_index"], "buy"))
-                else:
-                    strategy.append((m["market_index"], "skip"))
+                favorable_sell = False
+
+            # Cheap buy — but only when this product can ALSO exit higher THIS
+            # round. Requiring a real exit stops the bot from hoarding stock it
+            # can never sell (that's exactly how it bled cash before).
+            exit_price = best_exit_price.get(product, price)
+            favorable_buy = (
+                norm <= self.BUY_THRESHOLD
+                and exit_price >= price * (1 + self.MIN_EXIT_BUFFER)
+                and balance > price * self.BUY_RESERVE
+                and position < self.MAX_POSITION
+            )
+
+            if favorable_buy:
+                strategy.append((m["market_index"], "buy"))
+            elif favorable_sell:
+                strategy.append((m["market_index"], "sell"))
+            else:
+                strategy.append((m["market_index"], "skip"))
 
         return strategy
 
