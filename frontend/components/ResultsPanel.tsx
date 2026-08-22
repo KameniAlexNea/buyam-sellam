@@ -131,13 +131,8 @@ export default function ResultsPanel({
                   <p
                     className={`mt-1 w-full truncate text-center text-[11px] font-black uppercase tracking-wide ${pc.text}`}
                   >
-                    {s.username === "You" ? "You" : s.username}
+                    {s.username}
                   </p>
-                  {humanPlayers?.includes(s.username) && s.username !== "You" && (
-                    <span className="mt-0.5 rounded-full bg-gold/15 px-1.5 py-0.5 text-[8px] font-bold uppercase text-gold border border-gold/30">
-                      {t("plan.youTag")}
-                    </span>
-                  )}
                 </div>
                 {/* Podium block */}
                 <div
@@ -180,7 +175,6 @@ export default function ResultsPanel({
             </thead>
             <tbody>
               {standings.map((s) => {
-                const isHuman = humanPlayers?.includes(s.username) ?? false;
                 const pc = playerColor(Math.max(0, standings.findIndex((x) => x.username === s.username)));
                 const st = results.stats?.[s.username];
                 return (
@@ -194,13 +188,8 @@ export default function ResultsPanel({
                           {s.username.slice(0, 1).toUpperCase()}
                         </span>
                         <span className="truncate font-semibold text-bright">
-                          {s.username === "You" ? "You" : s.username}
+                          {s.username}
                         </span>
-                        {isHuman && s.username !== "You" && (
-                          <span className="rounded-full bg-gold/15 px-1.5 py-0.5 text-[8px] font-bold uppercase text-gold border border-gold/30">
-                            {t("plan.youTag")}
-                          </span>
-                        )}
                       </div>
                       <div className="mt-0.5 flex flex-wrap gap-1">
                         {s.spoiled && s.spoiled.length > 0 ? (

@@ -76,6 +76,7 @@ function MoveRow({ move, index }: { move: MoveFeedEntry; index: number }) {
  * the other players' balances.
  */
 export default function BotTurnDashboard({ game }: BotTurnDashboardProps) {
+  const { t } = useI18n();
   const feed = game.move_feed ?? [];
   const recent = feed.slice(-6).reverse();
 

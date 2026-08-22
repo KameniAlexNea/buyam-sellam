@@ -21,7 +21,6 @@ interface StrategyDashboardProps {
   game: GameState;
   planner: string;
   plannerPlayer?: PlayerInfo | null;
-  humanPlayers: string[];
   choices: Record<number, MarketAction>;
   onChoice: (index: number, action: MarketAction) => void;
   busy?: boolean;
@@ -51,7 +50,6 @@ export default function StrategyDashboard({
   game,
   planner,
   plannerPlayer,
-  humanPlayers,
   choices,
   onChoice,
   busy,
@@ -457,7 +455,6 @@ export default function StrategyDashboard({
                 const c = colorOf(p.username);
                 const submitted = game.strategies_submitted.includes(p.username);
                 const isPlanner = p.username === planner;
-                const isHuman = humanPlayers.includes(p.username);
                 const rank = i + 1;
                 const rankCls =
                   rank === 1
@@ -485,7 +482,7 @@ export default function StrategyDashboard({
                     <span className={`truncate font-semibold ${isPlanner ? c.text : "text-bright"}`}>
                       {p.username}
                     </span>
-                    {isHuman && <span className="text-[8px] font-bold text-gold/80">{t("plan.youTag")}</span>}
+                    {isPlanner && <span className="text-[8px] font-bold text-gold/80">{t("plan.youTag")}</span>}
                     <span className="ml-auto shrink-0 font-display font-bold text-cyan">
                       {moneyShort(p.balance)}
                     </span>

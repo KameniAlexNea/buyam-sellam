@@ -82,7 +82,6 @@ export default function RoundRecapPanel({
                 <span className={`truncate font-semibold ${isHuman ? c.text : "text-bright"}`}>
                   {p.username}
                 </span>
-                {isHuman && <span className="text-[8px] font-bold text-gold/80">{t("plan.youTag")}</span>}
                 <span className="ml-auto font-display font-bold text-cyan">{money(p.balance)}</span>
                 <span className={`w-24 shrink-0 text-right font-display font-bold ${deltaCls}`}>
                   {p.change > 0 ? "▲ +" : p.change < 0 ? "▼ −" : ""}

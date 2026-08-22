@@ -284,7 +284,6 @@ export default function GameBoard({ gameId }: { gameId: string }) {
             game={game}
             planner={currentPlanner ?? ""}
             plannerPlayer={plannerPlayer}
-            humanPlayers={humanPlayers}
             choices={choices}
             onChoice={onChoice}
             busy={busy}
