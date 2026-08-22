@@ -56,7 +56,10 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
   const invItem = player?.inventory.find((it) => it.product.name === market?.product);
   const avgCost = invItem?.avg_cost ?? 0;
   const profitPerUnit = !isBuy && avgCost > 0 ? unitPrice - avgCost : null;
-  const profitTotal = profitPerUnit != null ? profitPerUnit * qty : null;
+  // Net gain/loss from selling these units at the current dice price, after the
+  // entry fee and tax — the real "did I make money" number.
+  const costOfQty = avgCost * qty;
+  const expectedPL = !isBuy ? total - costOfQty : null;
 
   const hist = market?.price_history ?? [];
   const last = hist.length > 0 ? hist[hist.length - 1] : marketPrice;
@@ -231,14 +234,22 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
                 <Row
                   label={t("action.costBasis")}
                   value={`${money(avgCost)}/u`}
-                  note={t("action.youPaid", { cost: money(avgCost * qty), qty })}
+                  note={
+                    avgCost > 0
+                      ? t("action.youPaid", { cost: money(avgCost * qty), qty })
+                      : t("action.freeStock")
+                  }
                 />
-                {profitTotal != null && (
+                {expectedPL != null && (
                   <Row
-                    label={t("action.profitVsSell")}
-                    value={`${profitTotal >= 0 ? "+" : ""}${money(profitTotal)}`}
-                    accent
-                    note={`${moneyShort(profitPerUnit ?? 0)}/u`}
+                    label={t("action.expectedPL")}
+                    value={`${expectedPL >= 0 ? "+" : ""}${money(expectedPL)}`}
+                    tone={expectedPL >= 0 ? "text-buy" : "text-sell"}
+                    note={
+                      avgCost > 0
+                        ? `${moneyShort(profitPerUnit ?? 0)}/u`
+                        : t("action.freeStock")
+                    }
                   />
                 )}
                 <Row label={t("action.revenue", { qty, price: moneyShort(unitPrice) })} value={`+${money(gross)}`} />
@@ -285,12 +296,14 @@ function Row({
   strong,
   note,
   accent,
+  tone,
 }: {
   label: string;
   value: string;
   strong?: boolean;
   note?: string;
   accent?: boolean;
+  tone?: string;
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
@@ -300,7 +313,7 @@ function Row({
       </span>
       <span
         className={`font-display font-bold ${
-          strong ? "text-lg text-bright" : accent ? "text-gold" : "text-bright"
+          tone ?? (strong ? "text-lg text-bright" : accent ? "text-gold" : "text-bright")
         }`}
       >
         {value}
