@@ -90,7 +90,7 @@ export default function ActionDashboard({ game, busy, onExecute }: ActionDashboa
               </div>
             </div>
             <p className="text-[10px] text-dim">
-              {t("action.rolled", { dice: game.dice_total, price: money(game.dice_price ?? 0) })}
+              {t("action.rolled", { dice: game.dice_total ?? 0, price: money(game.dice_price ?? 0) })}
             </p>
             <button
               type="button"

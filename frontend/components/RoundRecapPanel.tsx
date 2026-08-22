@@ -62,15 +62,15 @@ export default function RoundRecapPanel({
     switch (m.action) {
       case "buy":
         return t("move.bought", {
-          qty: m.quantity,
-          product: m.product,
+          qty: m.quantity ?? 0,
+          product: m.product ?? "",
           price: money(m.unit_price ?? 0),
           cost: money(m.total ?? 0),
         });
       case "sell":
         return t("move.sold", {
-          qty: m.quantity,
-          product: m.product,
+          qty: m.quantity ?? 0,
+          product: m.product ?? "",
           price: money(m.unit_price ?? 0),
           revenue: money(m.total ?? 0),
         });

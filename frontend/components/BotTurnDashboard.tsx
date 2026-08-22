@@ -28,18 +28,18 @@ function MoveRow({ move, index }: { move: MoveFeedEntry; index: number }) {
 
   let label = "";
   if (move.action === "roll") {
-    label = t("move.rolled", { dice: move.dice_total, price: money(move.dice_price ?? 0) });
+    label = t("move.rolled", { dice: move.dice_total ?? 0, price: money(move.dice_price ?? 0) });
   } else if (move.action === "buy") {
     label = t("move.bought", {
-      qty: move.quantity,
-      product: move.product,
+      qty: move.quantity ?? 0,
+      product: move.product ?? "",
       price: money(move.unit_price ?? 0),
       cost: money(move.total ?? 0),
     });
   } else if (move.action === "sell") {
     label = t("move.sold", {
-      qty: move.quantity,
-      product: move.product,
+      qty: move.quantity ?? 0,
+      product: move.product ?? "",
       price: money(move.unit_price ?? 0),
       revenue: money(move.total ?? 0),
     });
