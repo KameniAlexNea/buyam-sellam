@@ -119,8 +119,10 @@ export default function RoundRecapPanel({
         </div>
       </div>
 
-      {/* Round highlights — the actual trades that made the news */}
-      <div className="mb-4 rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-4">
+      {/* Highlights + standings side by side on wide screens */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Round highlights — the actual trades that made the news */}
+        <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-4">
         <h3 className="mb-2 font-display text-sm font-bold uppercase tracking-wide">
           {t("recap.highlights")}
         </h3>
@@ -153,8 +155,8 @@ export default function RoundRecapPanel({
         )}
       </div>
 
-      {/* Standings with rank movement */}
-      <div className="mb-4 rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-4">
+        {/* Standings with rank movement */}
+        <div className="rounded-2xl border border-[rgba(100,180,255,0.12)] bg-card p-4">
         <h3 className="mb-3 font-display text-sm font-bold uppercase tracking-wide">
           {t("recap.positions")}
         </h3>
@@ -208,6 +210,7 @@ export default function RoundRecapPanel({
               </div>
             );
           })}
+        </div>
         </div>
       </div>
 

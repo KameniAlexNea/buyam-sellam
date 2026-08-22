@@ -296,8 +296,8 @@ export default function GameBoard({ gameId }: { gameId: string }) {
           // Bot's action turn — same dashboard look, but auto-driven replay.
           <BotTurnDashboard game={game} />
         ) : game.phase === "end_round" && game.round_recap ? (
-          // Round-end recap gets the full width — the "what happened" moment.
-          <div className="mx-auto h-full w-full max-w-2xl overflow-y-auto">
+          // Round-end recap spans the full width — the "what happened" moment.
+          <div className="mx-auto h-full w-full max-w-7xl overflow-y-auto">
             <RoundRecapPanel
               recap={game.round_recap}
               humanPlayers={humanPlayers}
@@ -308,7 +308,7 @@ export default function GameBoard({ gameId }: { gameId: string }) {
           </div>
         ) : game.phase === "game_over" ? (
           // Final results get the full width — no board decorations around them.
-          <div className="mx-auto h-full w-full max-w-2xl overflow-y-auto">{center}</div>
+          <div className="mx-auto h-full w-full max-w-7xl overflow-y-auto">{center}</div>
         ) : (
           <div className="h-full overflow-y-auto">
             <Board
